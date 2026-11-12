@@ -1,0 +1,84 @@
+{
+  "expo": {
+    "name": "CES Team",
+    "slug": "ces-team",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "cesteam",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#103E31"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "az.cesgroup.team"
+    },
+    "android": {
+      "package": "az.cesgroup.team",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#103E31"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "VIBRATE",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "CES Team",
+      "shortName": "CES Team",
+      "lang": "az",
+      "themeColor": "#103E31",
+      "description": "CES komandasının daxili iş və söhbət tətbiqi."
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": false
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#15A34A"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Söhbətə şəkil əlavə etmək üçün qalereyaya giriş lazımdır.",
+          "cameraPermission": "Şəkil çəkib göndərmək üçün kameraya giriş lazımdır."
+        }
+      ],
+      "expo-document-picker",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Səsli mesaj yazmaq üçün mikrofona giriş lazımdır."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {}
+    }
+  }
+}

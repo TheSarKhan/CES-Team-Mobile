@@ -1,0 +1,56 @@
+name: CES Team mobile CI and deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ces-team-mobile-production
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:web
+      - run: tar -czf /tmp/release.tgz dist-web deploy/release.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: /tmp/release.tgz
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.CES_TEAM_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.CES_TEAM_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.CES_TEAM_HOST }}
+          DEPLOY_USER: ${{ secrets.CES_TEAM_USER }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /var/www/ces-team/releases/mobile-$SHA"
+          scp release.tgz "$DEPLOY_USER@$DEPLOY_HOST:/var/www/ces-team/releases/mobile-$SHA/source.tgz"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /var/www/ces-team/releases/mobile-$SHA && tar -xzf source.tgz && bash deploy/release.sh '$SHA'"

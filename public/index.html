@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+
+    <!-- PWA / ekrana qısayol (theme-color və description app.json-dan əlavə olunur) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="CES Team" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- react-native-web tövsiyə olunan stil sıfırlaması -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        /* iOS yazı ölçüsünü özbaşına böyütməsin; cəld iki dəfə toxunuşda yaxınlaşma olmasın (pinch qalır) */
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        touch-action: manipulation;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      /* iOS Safari: şrifti 16px-dən kiçik olan giriş sahəsinə fokus verəndə səhifəni yaxınlaşdırır
+         (ana ekran tətbiqində bu yaxınlaşma qalır, yazılar kəsilir). Telefon enində 16px məcbur edilir. */
+      @media (max-width: 899px) {
+        input,
+        textarea,
+        select {
+          font-size: 16px !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>JavaScript aktiv olmalıdır.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
