@@ -139,7 +139,7 @@ export default function InstallApp() {
               <View style={{ gap: 14 }}>
                 <StepRow n={1} icon={<Share size={20} color={colors.blue} strokeWidth={1.75} />}>Aşağıdakı paneldə <B>Paylaş</B> düyməsinə toxunun.</StepRow>
                 <StepRow n={2} icon={<SquarePlus size={20} color={colors.ink2} strokeWidth={1.75} />}>Siyahını yuxarı sürüşdürüb <B>Ana ekrana əlavə et</B> seçin.</StepRow>
-                <StepRow n={3}>Sağ yuxarıda <B>Əlavə et</B> düyməsinə toxunun. İkon ana ekranda görünəcək. Sonra ikondan açıb Profil → <B>Bildirişləri aç</B> edin.</StepRow>
+                <StepRow n={3}>Sağ yuxarıda <B>Əlavə et</B> düyməsinə toxunun. İkon ana ekranda görünəcək. Sonra ikondan açıb Profil → <B>Bu cihaza bildiriş</B> sətrinə toxunun.</StepRow>
                 {env.iosNotSafari && <Text style={{ fontSize: 12, lineHeight: 16, color: colors.muted }}>Paylaş menyusunda seçim görünmürsə, saytı Safari-də açın.</Text>}
               </View>
             ) : env.desktop && env.safari ? (
