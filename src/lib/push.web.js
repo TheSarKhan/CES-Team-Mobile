@@ -65,6 +65,8 @@ export function onNotificationOpened(handler) {
   const fn = (e) => { if (e.data?.type === 'open-conversation') handler(e.data); };
   navigator.serviceWorker?.addEventListener('message', fn);
   const qs = new URLSearchParams(window.location.search);
+  // bildirişdən soyuq açılış (/chats?c=… və ya /cards?c=…): həmin söhbət/kart açılsın
   if (qs.get('c') && window.location.pathname.startsWith('/chats')) handler({ conversationId: qs.get('c'), messageId: qs.get('m') });
+  if (qs.get('c') && window.location.pathname.startsWith('/cards')) handler({ cardId: qs.get('c') });
   return () => navigator.serviceWorker?.removeEventListener('message', fn);
 }

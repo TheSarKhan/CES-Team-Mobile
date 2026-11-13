@@ -178,7 +178,16 @@ export default function TabsLayout() {
   useEffect(() => {
     if (status !== 'authenticated') return undefined;
     registerForPushNotificationsAsync();
-    return onNotificationOpened((d) => (d.cardId ? router.navigate(isWide ? `/cards?c=${d.cardId}` : `/card/${d.cardId}`) : router.navigate(`/chats?c=${d.conversationId}`)));
+    // Bildirişə toxunanda məhz həmin söhbət/kart açılır (telefonda siyahı arxada qalır ki, «geri» işləsin)
+    return onNotificationOpened((d) => {
+      if (d.cardId) {
+        if (isWide) router.navigate(`/cards?c=${d.cardId}`);
+        else { router.navigate('/cards'); router.push(`/card/${d.cardId}`); }
+      } else if (d.conversationId) {
+        if (isWide) router.navigate(`/chats?c=${d.conversationId}`);
+        else { router.navigate('/chats'); router.push(`/chat/${d.conversationId}`); }
+      }
+    });
   }, [status, router, isWide]);
 
   // Web: service worker (push üçün) — bir dəfə qeydiyyat
