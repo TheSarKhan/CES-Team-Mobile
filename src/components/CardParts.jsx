@@ -1,8 +1,9 @@
 import { View, Text, Pressable, Image } from 'react-native';
-import { Check, User, ChevronRight } from 'lucide-react-native';
+import { Check, User, ChevronRight, AtSign } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import { tone, iconFor } from '../lib/cardUi';
-import { useDef } from '../hooks/useCards';
+import { useDef, useCardUnread } from '../hooks/useCards';
+import { Badge } from './ui';
 import { listTime } from '../lib/format';
 
 export function StatusBadge({ status, size = 'md' }) {
@@ -42,6 +43,7 @@ export function TypeTile({ type, size = 48 }) {
 /** Kart siyahısı sətri. */
 export function CardRow({ card, selected, onPress }) {
   const { colors } = useTheme();
+  const u = useCardUnread().map[card.id];
   return (
     <Pressable
       onPress={onPress}
@@ -53,7 +55,7 @@ export function CardRow({ card, selected, onPress }) {
     >
       <TypeTile type={card.type} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Text numberOfLines={1} style={{ color: colors.ink, fontWeight: '800', fontSize: 16.5 }}>{card.title}</Text>
+        <Text numberOfLines={1} style={{ color: colors.ink, fontWeight: u?.unread ? '900' : '800', fontSize: 16.5 }}>{card.title}</Text>
         <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13.5 }}>{card.subtitle || card.typeLabel}</Text>
         <Text style={{ color: colors.faint, fontSize: 12 }}>{card.number} · {listTime(card.updatedAt)}</Text>
       </View>
@@ -65,6 +67,12 @@ export function CardRow({ card, selected, onPress }) {
             <Text style={{ color: colors.ink2, fontSize: 12.5, fontWeight: '600' }}>{card.assignee.fullName.split(' ')[0]}{(card.assignees?.length || 0) > 1 ? ` +${card.assignees.length - 1}` : ''}</Text>
           </View>
         ) : <Text style={{ color: colors.faint, fontSize: 12 }}>Məsul yoxdur</Text>}
+        {u?.unread ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityLabel={`${u.unread} oxunmamış mesaj${u.mentions ? ', etiketlənmisiniz' : ''}`}>
+            {u.mentions > 0 ? <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}><AtSign size={12} color="#fff" strokeWidth={3} /></View> : null}
+            <Badge count={u.unread} />
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );

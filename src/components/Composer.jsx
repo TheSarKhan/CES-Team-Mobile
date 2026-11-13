@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, Platform, Image, ActivityIndicator, PanResponder, Modal, useWindowDimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Plus, Send, X, Image as ImageIcon, Camera, FileText, CornerUpLeft, Pencil, Mic, Pause, Trash2, SquarePlus, ChevronLeft, ChevronUp, Lock } from 'lucide-react-native';
+import { Plus, Send, X, Image as ImageIcon, Camera, FileText, CornerUpLeft, Pencil, Mic, Pause, Trash2, SquarePlus, ChevronLeft, ChevronUp, Lock, AtSign } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import { Avatar } from './Avatar';
 import { uploadFile } from '../api/endpoints';
@@ -19,7 +19,7 @@ const MENTION_RE = /(^|\s)@([^\s@]*)$/;
  * onSend({ text, attachmentIds, mentionIds, attachments }) → mesaj göndər.
  * onEdit(text) → redaktə rejimində. members: etiket siyahısı.
  */
-export function Composer({ conversationId, members, myId, replyTo, onCancelReply, editing, onCancelEdit, onSend, onEdit, onError, onCreateCard }) {
+export function Composer({ conversationId, members, canTagAll = false, myId, replyTo, onCancelReply, editing, onCancelEdit, onSend, onEdit, onError, onCreateCard }) {
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const [atts, setAtts] = useState([]); // {key, uri, name, kind, status, server}
@@ -34,6 +34,7 @@ export function Composer({ conversationId, members, myId, replyTo, onCancelReply
   };
   const [camera, setCamera] = useState(false);
   const [mentions, setMentions] = useState([]); // {id, name}
+  const [tagAll, setTagAll] = useState(false); // «@Hamı»
   const lastTyping = useRef(0);
   const voice = useVoiceRecorder();
   const [voiceBusy, setVoiceBusy] = useState(false);
@@ -60,12 +61,14 @@ export function Composer({ conversationId, members, myId, replyTo, onCancelReply
 
   const suggestions = useMemo(() => {
     if (query === null || editing) return [];
-    return (members || [])
-      .filter((m) => m.user.id !== myId && m.user.fullName.toLowerCase().includes(query))
-      .slice(0, 5);
-  }, [query, members, myId, editing]);
+    const people = (members || []).filter((m) => m.user.id !== myId && m.user.fullName.toLowerCase().includes(query));
+    // «@Hamı»: qrupun hamısını etiketləyir (kart söhbətində — söhbətdə olmayan qrup üzvləri də daxil)
+    const all = canTagAll && ['hamı', 'hami', 'all'].some((w) => w.startsWith(query)) ? [{ all: true, user: { id: 'all', fullName: 'Hamı' } }] : [];
+    return [...all, ...people].slice(0, 5);
+  }, [query, members, myId, editing, canTagAll]);
 
   const pickMention = (u) => {
+    if (u.id === 'all') { setText((t) => t.replace(MENTION_RE, (_, pre) => `${pre}@Hamı `)); setTagAll(true); input.current?.focus(); return; }
     setText((t) => t.replace(MENTION_RE, (_, pre) => `${pre}@${u.fullName} `));
     setMentions((arr) => (arr.some((x) => x.id === u.id) ? arr : [...arr, { id: u.id, name: u.fullName }]));
     input.current?.focus();
@@ -120,12 +123,14 @@ export function Composer({ conversationId, members, myId, replyTo, onCancelReply
       setText('');
       return;
     }
-    const mentionIds = mentions.filter((m) => t.includes('@' + m.name)).map((m) => m.id);
+    const all = tagAll && t.includes('@Hamı');
+    const mentionIds = all ? (members || []).map((m) => m.user.id).filter((id) => id !== myId) : mentions.filter((m) => t.includes('@' + m.name)).map((m) => m.id);
     const done = atts.filter((a) => a.status === 'done');
-    onSend?.({ text: t, attachmentIds: done.map((a) => a.server.id), attachments: done, mentionIds });
+    onSend?.({ text: t, attachmentIds: done.map((a) => a.server.id), attachments: done, mentionIds, mentionAll: all });
     setText('');
     setAtts([]);
     setMentions([]);
+    setTagAll(false);
   };
 
   const showMic = !text.trim() && atts.length === 0 && !editing;
@@ -196,8 +201,11 @@ export function Composer({ conversationId, members, myId, replyTo, onCancelReply
         <View style={{ marginHorizontal: 10, marginBottom: 4, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' }}>
           {suggestions.map((m) => (
             <Pressable key={m.user.id} onPress={() => pickMention(m.user)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, backgroundColor: pressed ? colors.sunk : 'transparent' })}>
-              <Avatar name={m.user.fullName} id={m.user.id} uri={m.user.avatarUrl} size={30} />
+              {m.all
+                ? <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' }}><AtSign size={16} color="#fff" strokeWidth={2.6} /></View>
+                : <Avatar name={m.user.fullName} id={m.user.id} uri={m.user.avatarUrl} size={30} />}
               <Text style={{ color: colors.ink, fontWeight: '600' }}>{m.user.fullName}</Text>
+              {m.all ? <Text style={{ color: colors.muted, fontSize: 12 }} numberOfLines={1}> · bütün qrup üzvlərini etiketlə</Text> : null}
               {m.user.position ? <Text style={{ color: colors.muted, fontSize: 12 }} numberOfLines={1}> · {m.user.position}</Text> : null}
             </Pressable>
           ))}

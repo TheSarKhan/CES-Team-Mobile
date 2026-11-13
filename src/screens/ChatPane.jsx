@@ -80,7 +80,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
     if (!lastServerId || lastServerId <= lastReadSent.current) return;
     if (conv && conv.unreadCount === 0 && conv.lastReadMessageId >= lastServerId) { lastReadSent.current = lastServerId; return; }
     lastReadSent.current = lastServerId;
-    chatApi.read(id, lastServerId).catch(() => {});
+    chatApi.read(id, lastServerId).then(() => qc.invalidateQueries({ queryKey: ['card-unread'] })).catch(() => {});
     qc.setQueryData(qk.conversations, (l) => l && l.map((c) => (String(c.id) === String(id)
       ? { ...c, unreadCount: 0, unreadMentions: 0, lastReadMessageId: Math.max(c.lastReadMessageId, lastServerId) } : c)));
   }, [lastServerId, conv, id, qc]);
@@ -127,10 +127,10 @@ export function ChatPane({ id, onBack, embedded = false }) {
     .map(([uid]) => memberById[uid]?.user.fullName?.split(' ')[0]).filter(Boolean);
 
   // ── göndərmə ──
-  const send = async ({ text, attachmentIds = [], attachments = [], mentionIds = [], clientId: existing, reply }) => {
+  const send = async ({ text, attachmentIds = [], attachments = [], mentionIds = [], mentionAll = false, clientId: existing, reply }) => {
     const clientId = existing || `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const replyRef = reply === undefined ? replyTo : reply;
-    const body = { clientId, text: text || null, replyToId: replyRef?.id ?? null, attachmentIds, mentionIds };
+    const body = { clientId, text: text || null, replyToId: replyRef?.id ?? null, attachmentIds, mentionIds, ...(mentionAll ? { mentionAll: true } : {}) };
     const temp = {
       id: -Date.now(), clientId, conversationId: Number(id), type: attachments.length ? 'MEDIA' : 'TEXT', sender: { id: myId, fullName: me?.fullName },
       text, replyTo: replyRef ? { id: replyRef.id, sender: replyRef.sender, text: replyRef.text, deleted: false } : null,
@@ -149,7 +149,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
 
   const retry = (m) => {
     if (!m._body) return;
-    send({ text: m._body.text, attachmentIds: m._body.attachmentIds, attachments: (m.attachments || []).map((s) => ({ server: s })), mentionIds: m._body.mentionIds, clientId: m.clientId, reply: m.replyTo });
+    send({ text: m._body.text, attachmentIds: m._body.attachmentIds, attachments: (m.attachments || []).map((s) => ({ server: s })), mentionIds: m._body.mentionIds, mentionAll: m._body.mentionAll, clientId: m.clientId, reply: m.replyTo });
   };
 
   const doEdit = async (text) => {
@@ -251,7 +251,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
             showName={item.first}
             showAvatar={item.last}
             onOpenProfile={openProfile}
-            mentionNames={(item.m.mentionIds || []).map((u) => memberById[u]?.user.fullName).filter(Boolean)}
+            mentionNames={[...(item.m.mentionIds || []).map((u) => memberById[u]?.user.fullName).filter(Boolean), ...(item.m.text?.includes('@Hamı') ? ['Hamı'] : [])]}
             status={item.m.sender?.id === myId ? statusOf(item.m) : undefined}
             onLongPress={openActions}
             onOpenImage={(a, all) => setViewer({ images: all, startId: a.id })}
@@ -276,6 +276,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
           key={id}
           conversationId={Number(id)}
           members={members}
+          canTagAll={conv?.type === 'GROUP' || conv?.type === 'CARD'}
           myId={myId}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}

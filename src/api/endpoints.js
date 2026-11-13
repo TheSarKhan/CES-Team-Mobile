@@ -60,6 +60,7 @@ export const cardsApi = {
   types: () => get('/card-types'),
   list: (params) => get('/cards', params),
   summary: () => get('/cards/summary'),
+  unread: () => get('/cards/unread'), // kart söhbətlərində oxunmamış mesaj/etiket sayı: [{cardId, threadId, unread, mentions}]
   get: (id) => get(`/cards/${id}`),
   history: (id) => get(`/cards/${id}/history`),
   create: (body) => post('/cards', body),

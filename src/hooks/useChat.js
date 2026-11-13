@@ -93,6 +93,7 @@ function applyNewMessage(qc, msg, myId, activeId) {
     return next.sort((a, b) => String(b.lastMessageAt || '').localeCompare(String(a.lastMessageAt || '')));
   });
   if (!known) qc.invalidateQueries({ queryKey: qk.conversations });
+  if (!mine) qc.invalidateQueries({ queryKey: ['card-unread'] }); // kart söhbətinə gələn mesaj kart siyahısında göstərilsin
   upsertMessage(qc, msg);
 }
 

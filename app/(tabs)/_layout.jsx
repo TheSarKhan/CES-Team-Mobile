@@ -11,6 +11,7 @@ import { PressableScale, ND } from '../../src/components/motion';
 import { Animated } from 'react-native';
 import { useConversations, useRealtimeSync, useMe } from '../../src/hooks/useChat';
 import { Avatar } from '../../src/components/Avatar';
+import { useCardUnread } from '../../src/hooks/useCards';
 import { registerForPushNotificationsAsync, onNotificationOpened } from '../../src/lib/push';
 
 // «İşlərim» (work) hələlik gizlidir: menyuda yoxdur, ekranı saxlanılıb (href: null)
@@ -32,6 +33,8 @@ function NavIcon({ active, children }) {
   return <Animated.View style={{ transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.4] }) }, { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }] }}>{children}</Animated.View>;
 }
 
+function useCardsUnread() { return useCardUnread().total; }
+
 function useUnread() {
   const q = useConversations();
   return (q.data || []).filter((c) => !c.muted || c.unreadMentions > 0).reduce((s, c) => s + c.unreadCount, 0);
@@ -43,6 +46,7 @@ function BottomBar() {
   const router = useRouter();
   const path = usePathname();
   const unread = useUnread();
+  const cardUnread = useCardsUnread();
   return (
     <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line, paddingHorizontal: 8, paddingTop: 5, paddingBottom: Platform.OS === 'web' ? 5 : Math.max(insets.bottom, 5) }}>
       {NAV.map(({ name, label, Icon }) => {
@@ -51,7 +55,7 @@ function BottomBar() {
           <PressableScale key={name} onPress={() => router.navigate(`/${name}`)} scaleTo={0.9} accessibilityRole="tab" accessibilityState={{ selected: active }} style={{ flex: 1, alignItems: 'center', paddingVertical: 7, gap: 3, borderRadius: 14, backgroundColor: active ? colors.brandTint : 'transparent' }}>
             <View>
               <NavIcon active={active}><Icon size={24} color={active ? colors.brand : colors.muted} strokeWidth={active ? 2.4 : 1.9} /></NavIcon>
-              {name === 'chats' && unread > 0 ? <View style={{ position: 'absolute', top: -6, right: -12 }}><Badge count={unread} min={18} /></View> : null}
+              {(name === 'chats' ? unread : name === 'cards' ? cardUnread : 0) > 0 ? <View style={{ position: 'absolute', top: -6, right: -12 }}><Badge count={name === 'chats' ? unread : cardUnread} min={18} /></View> : null}
             </View>
             <Text style={{ color: active ? colors.brand : colors.muted, fontSize: 11.5, fontWeight: active ? '700' : '500' }}>{label}</Text>
           </PressableScale>
@@ -74,6 +78,7 @@ function Rail() {
   const router = useRouter();
   const path = usePathname();
   const unread = useUnread();
+  const cardUnread = useCardsUnread();
   const me = useAuthStore((st) => st.user);
   const logout = useAuthStore((st) => st.logout);
   const meQ = useMe(me?.id);
@@ -101,7 +106,7 @@ function Rail() {
       <View style={{ gap: 6, alignItems: wide ? 'stretch' : 'center' }}>
         {items.map(({ name, label, Icon }) => {
           const active = path === `/${name}`;
-          const count = name === 'chats' ? unread : 0;
+          const count = name === 'chats' ? unread : name === 'cards' ? cardUnread : 0;
           return (
             <PressableScale key={name} onPress={() => router.navigate(`/${name}`)} scaleTo={0.94} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: active }}
               style={wide

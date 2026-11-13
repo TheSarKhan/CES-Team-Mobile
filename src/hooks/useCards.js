@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cardsApi, registryApi } from '../api/endpoints';
 
@@ -7,6 +8,7 @@ export const ck = {
   card: (id) => ['card', String(id)],
   history: (id) => ['card-history', String(id)],
   summary: ['card-summary'],
+  unread: ['card-unread'],
 };
 
 export const useCardTypes = () => useQuery({ queryKey: ck.types, queryFn: cardsApi.types, staleTime: Infinity });
@@ -19,6 +21,17 @@ export const useCardHistory = (id, enabled = true) =>
   useQuery({ queryKey: ck.history(id), queryFn: () => cardsApi.history(id), enabled: enabled && id != null });
 
 export const useCardSummary = () => useQuery({ queryKey: ck.summary, queryFn: cardsApi.summary, staleTime: 15_000 });
+
+/** Kartların söhbətində oxunmamış mesaj və etiket sayı: {cardId → {unread, mentions}}; total = bütün oxunmamış mesajlar. */
+export const useCardUnread = () => {
+  const q = useQuery({ queryKey: ck.unread, queryFn: cardsApi.unread, staleTime: 10_000 });
+  return useMemo(() => {
+    const map = {};
+    let total = 0;
+    (q.data || []).forEach((u) => { map[u.cardId] = u; total += u.unread; });
+    return { map, total };
+  }, [q.data]);
+};
 
 /** Reyestr (müştəri, texnika növü, öz texnikamız, podratçı, ərazi): seçim siyahısı; yeni dəyərlər kart saxlananda avtomatik əlavə olunur. */
 export const useRegistry = (kind) =>
