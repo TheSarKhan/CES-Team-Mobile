@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useLayout } from '../lib/useLayout';
-import { ArrowLeft, Pencil, ChevronRight, ArrowRight, Paperclip, UserRound, History, Check } from 'lucide-react-native';
+import { ArrowLeft, Info, Pencil, ChevronRight, ArrowRight, Paperclip, UserRound, History, Check } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import { StatusBadge, TypeTile } from '../components/CardParts';
 import { Avatar } from '../components/Avatar';
@@ -22,7 +22,7 @@ import { fileSize, hhmm, dayLabel } from '../lib/format';
 import { isoToDisplay, displayToIso, todayIso } from '../lib/dates';
 import { SelectBox } from '../components/ui';
 
-const TABS = [['info', 'Məlumat'], ['history', 'Tarixçə'], ['talk', 'Müzakirə']];
+const TABS = [['info', 'Məlumat'], ['history', 'Tarixçə']];
 
 function Row({ label, children, onPress }) {
   const { colors } = useTheme();
@@ -169,6 +169,7 @@ export function CardDetail({ id, onBack, onOpenChatGroup }) {
   const card = q.data;
   const def = useDef(card?.summary.type);
   const members = useMembers(card?.groupId).data;
+  const [view, setView] = useState('chat'); // kart açılanda birbaşa söhbət; «i» məlumat səhifəsini açır
   const [tab, setTab] = useState('info');
   const [edit, setEdit] = useState(false);
   const [statusSheet, setStatusSheet] = useState(false);
@@ -194,11 +195,35 @@ export function CardDetail({ id, onBack, onOpenChatGroup }) {
   const dayCount = (k) => days.filter((d) => d.state === k).length;
   const rows = visibleFields(fieldsToShow, card.fields).map((f) => [f, displayValue(f, card.fields[f.key])]).filter(([, v]) => v);
 
+  if (view === 'chat') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <View style={{ paddingTop: Platform.OS === 'web' ? 12 : insets.top + 6, paddingHorizontal: 14, paddingBottom: 10, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {onBack ? <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Geri"><ArrowLeft size={24} color={colors.headerInk} /></Pressable> : null}
+          <Pressable onPress={() => { setTab('info'); setView('info'); }} accessibilityRole="button" accessibilityLabel="Kart məlumatları" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TypeTile type={s.type} size={44} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text numberOfLines={1} style={{ color: colors.headerInk, fontWeight: '800', fontSize: 18 }}>{s.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 13, flexShrink: 1 }}>{s.number} · {s.typeLabel}</Text>
+                <StatusBadge status={s.status} size="sm" />
+              </View>
+            </View>
+          </Pressable>
+          <Pressable onPress={() => { setTab('info'); setView('info'); }} hitSlop={10} accessibilityRole="button" accessibilityLabel="Kart haqqında məlumat" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sunk, alignItems: 'center', justifyContent: 'center' }}>
+            <Info size={20} color={colors.ink2} />
+          </Pressable>
+        </View>
+        <View style={{ flex: 1 }}><ChatPane id={card.threadId} embedded /></View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingTop: Platform.OS === 'web' ? 14 : insets.top + 6, paddingHorizontal: 14, paddingBottom: 10, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          {onBack ? <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Geri"><ArrowLeft size={24} color={colors.headerInk} /></Pressable> : null}
+          <Pressable onPress={() => setView('chat')} hitSlop={10} accessibilityLabel="Söhbətə qayıt"><ArrowLeft size={24} color={colors.headerInk} /></Pressable>
           <TypeTile type={s.type} size={44} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.muted, fontSize: 13 }}>{s.number} · {s.typeLabel}</Text>
@@ -315,8 +340,6 @@ export function CardDetail({ id, onBack, onOpenChatGroup }) {
           ))}
         </ScrollView>
       )}
-
-      {tab === 'talk' && <View style={{ flex: 1 }}><ChatPane id={card.threadId} embedded /></View>}
 
       {orderForm ? (
         <CardForm
