@@ -1,6 +1,8 @@
 // Səsli mesaj — web (iPhone PWA, kompüter): MediaRecorder + HTMLAudioElement.
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { emptyLevels, pushLevel } from './levels';
+
 export const MAX_VOICE_MS = 5 * 60 * 1000;
 
 // Safari yalnız mp4/aac yazır; Chrome 126+ də mp4 yaza bilir — hamı eyni formatı çalsın deyə əvvəl mp4.
@@ -11,18 +13,39 @@ export function useVoiceRecorder() {
   const rec = useRef(null);
   const stream = useRef(null);
   const chunks = useRef([]);
-  const startedAt = useRef(0);
+  const accum = useRef(0); // fasilələrdən əvvəlki yığılmış müddət
+  const seg = useRef(0); // cari hissənin başlanğıcı
   const timer = useRef(null);
+  const pausedRef = useRef(false);
+  const audioCtx = useRef(null);
+  const analyser = useRef(null);
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [levels, setLevels] = useState(emptyLevels);
 
   const release = () => {
     if (timer.current) clearInterval(timer.current);
     timer.current = null;
     stream.current?.getTracks().forEach((t) => t.stop());
     stream.current = null;
+    try { audioCtx.current?.close(); } catch { /* ignore */ }
+    audioCtx.current = null;
+    analyser.current = null;
   };
   useEffect(() => release, []);
+  const elapsed = () => accum.current + (pausedRef.current ? 0 : Date.now() - seg.current);
+
+  // Mikrofonun cari ucalığı (RMS) → 0..1
+  const readLevel = () => {
+    const a = analyser.current;
+    if (!a) return 0;
+    const buf = new Uint8Array(a.fftSize);
+    a.getByteTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+    return Math.min(1, Math.sqrt(sum / buf.length) * 4.2);
+  };
 
   const start = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -38,21 +61,57 @@ export function useVoiceRecorder() {
     }
     stream.current = s;
     chunks.current = [];
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const an = ctx.createAnalyser();
+      an.fftSize = 512;
+      ctx.createMediaStreamSource(s).connect(an);
+      audioCtx.current = ctx;
+      analyser.current = an;
+    } catch { /* dalğa olmasa da yazı işləsin */ }
     const mime = pickMime();
     const r = new MediaRecorder(s, mime ? { mimeType: mime } : undefined);
     r.ondataavailable = (e) => { if (e.data?.size) chunks.current.push(e.data); };
     rec.current = r;
     r.start(250);
-    startedAt.current = Date.now();
+    accum.current = 0;
+    seg.current = Date.now();
+    pausedRef.current = false;
+    setPaused(false);
     setElapsedMs(0);
+    setLevels(emptyLevels());
     setRecording(true);
-    timer.current = setInterval(() => setElapsedMs(Date.now() - startedAt.current), 200);
+    timer.current = setInterval(() => {
+      setElapsedMs(elapsed());
+      if (!pausedRef.current) setLevels((l) => pushLevel(l, readLevel()));
+    }, 80);
+  }, []);
+
+  const pause = useCallback(() => {
+    const r = rec.current;
+    if (!r || pausedRef.current || r.state !== 'recording') return;
+    accum.current += Date.now() - seg.current;
+    pausedRef.current = true;
+    setPaused(true);
+    try { r.pause(); } catch { /* ignore */ }
+  }, []);
+
+  const resume = useCallback(() => {
+    const r = rec.current;
+    if (!r || !pausedRef.current) return;
+    seg.current = Date.now();
+    pausedRef.current = false;
+    setPaused(false);
+    try { r.resume(); } catch { /* ignore */ }
   }, []);
 
   const finish = useCallback(() => new Promise((resolve) => {
     const r = rec.current;
-    const durationMs = Date.now() - startedAt.current;
+    const durationMs = elapsed();
     setRecording(false);
+    setPaused(false);
+    pausedRef.current = false;
     if (!r || r.state === 'inactive') { release(); resolve({ blob: null, durationMs }); return; }
     r.onstop = () => {
       const type = (r.mimeType || 'audio/webm').split(';')[0];
@@ -72,7 +131,7 @@ export function useVoiceRecorder() {
 
   const cancel = useCallback(async () => { await finish(); }, [finish]);
 
-  return { recording, elapsedMs, start, stop, cancel };
+  return { recording, paused, elapsedMs, levels, start, pause, resume, stop, cancel };
 }
 
 let current = null; // eyni anda yalnız bir səs

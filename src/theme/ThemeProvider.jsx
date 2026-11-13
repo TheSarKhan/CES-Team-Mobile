@@ -3,6 +3,8 @@ import { useColorScheme } from 'react-native';
 import { light, dark } from './colors';
 
 const KEY = 'ces_team_theme';
+// Tünd rejim hələlik söndürülüb: tətbiq həmişə ağ fonla açılır (sistem tünd olsa belə). Qaytarmaq üçün true edin.
+const DARK_ENABLED = false;
 const Ctx = createContext({ colors: light, mode: 'system', setMode: () => {} });
 
 // Seçim: 'system' | 'light' | 'dark'. localStorage yalnız web-də (native-də sessiyada qalır).
@@ -17,13 +19,13 @@ export function ThemeProvider({ children }) {
     setModeState(m);
     try { globalThis.localStorage?.setItem(KEY, m); } catch { /* ignore */ }
   }, []);
-  const scheme = mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode;
+  const scheme = !DARK_ENABLED ? 'light' : mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode;
   const colors = scheme === 'dark' ? dark : light;
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.body.style.backgroundColor = colors.bg;
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.scheme === 'dark' ? '#0F2A22' : '#103E31');
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.scheme === 'dark' ? '#0F2A22' : '#FFFFFF');
     }
   }, [colors]);
 
@@ -32,3 +34,4 @@ export function ThemeProvider({ children }) {
 }
 
 export const useTheme = () => useContext(Ctx);
+export const darkEnabled = DARK_ENABLED;

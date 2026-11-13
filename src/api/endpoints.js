@@ -11,7 +11,23 @@ export const authApi = {
 export const meApi = {
   me: () => get('/me'),
   users: () => get('/users'),
+  user: (id) => get(`/users/${id}`),
+  deleteAvatar: async () => (await apiClient.delete('/me/avatar')).data,
+  update: async (body) => (await apiClient.patch('/me', body)).data,
+  storage: () => get('/me/storage'),
+  changePassword: (currentPassword, newPassword) => post('/me/password', { currentPassword, newPassword }),
 };
+
+// Profil şəkli yüklə: web-də Blob, native-də {uri,name,type}
+export async function uploadAvatar({ uri, name = 'avatar.jpg', mimeType = 'image/jpeg' }, path = '/me/avatar') {
+  const form = new FormData();
+  if (Platform.OS === 'web') form.append('file', await (await fetch(uri)).blob(), name);
+  else form.append('file', { uri, name, type: mimeType });
+  const { data } = await apiClient.post(path, form, {
+    headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000, transformRequest: (d) => d,
+  });
+  return data;
+}
 
 export const chatApi = {
   conversations: () => get('/conversations'),
@@ -30,6 +46,14 @@ export const chatApi = {
   remove: async (messageId) => (await apiClient.delete(`/messages/${messageId}`)).data,
   react: async (messageId, emoji) => (await apiClient.put(`/messages/${messageId}/reaction`, { emoji })).data,
   search: (q) => get('/search', { q }),
+  updateGroup: async (id, body) => (await apiClient.patch(`/conversations/${id}`, body)).data,
+  media: (id, kind = 'IMAGE', before) => get(`/conversations/${id}/media`, { kind, ...(before ? { before } : {}), limit: 60 }),
+  removeGroupAvatar: async (id) => (await apiClient.delete(`/conversations/${id}/avatar`)).data,
+};
+
+export const registryApi = {
+  list: (kind) => get(`/registry/${kind}`),
+  add: (kind, name) => post(`/registry/${kind}`, { name }),
 };
 
 export const cardsApi = {
@@ -42,7 +66,8 @@ export const cardsApi = {
   update: async (id, fields) => (await apiClient.patch(`/cards/${id}`, { fields })).data,
   status: (id, status, note) => post(`/cards/${id}/status`, { status, note }),
   // userId (qrup üzvü) və ya name (sərbəst mətn); ikisi də boşdursa məsul götürülür
-  assign: async (id, { userId = null, name = null } = {}) => (await apiClient.put(`/cards/${id}/assignee`, { userId, name })).data,
+  // Məsul şəxslər (1+): hər element üzvün id-si (rəqəm) və ya sərbəst ad (mətn); boş siyahı məsulları götürür
+  assign: async (id, assignees = []) => (await apiClient.put(`/cards/${id}/assignees`, { assignees })).data,
 };
 
 // Fayl yükləmə: web-də Blob, native-də {uri,name,type}
@@ -67,5 +92,7 @@ export async function uploadFile({ uri, name, mimeType, kind, durationMs }) {
 export const devicesApi = {
   register: (body) => post('/devices', body),
   unregister: (token) => post('/devices/unregister', { token }),
+  list: (token) => get('/devices', token ? { token } : undefined),
+  remove: (id) => apiClient.delete(`/devices/${id}`),
   vapidKey: async () => (await apiClient.get('/push/vapid-public-key')).data.publicKey,
 };

@@ -6,6 +6,8 @@ import { nameColor } from '../theme/colors';
 import { hhmm, fileSize } from '../lib/format';
 import { absoluteUrl } from '../config';
 import { VoiceBubble } from './VoiceBubble';
+import { Avatar } from './Avatar';
+import { FadeIn } from './motion';
 
 function parseSystem(m) {
   try { return JSON.parse(m.systemPayload || '{}').text || ''; } catch { return ''; }
@@ -42,7 +44,7 @@ function FileRow({ a, mine, colors }) {
 /**
  * status: 'pending' | 'failed' | 'sent' | 'read-some' | 'read-all' (yalnız öz mesajlarım üçün)
  */
-function BubbleBase({ message: m, mine, showSender, mentionNames, status, onLongPress, onOpenImage, onOpenFile, onRetry, onJumpTo, myId, onReact }) {
+function BubbleBase({ message: m, mine, fresh = false, showSender, showName = true, showAvatar = false, onOpenProfile, mentionNames, status, onLongPress, onOpenImage, onOpenFile, onRetry, onJumpTo, myId, onReact }) {
   const { colors } = useTheme();
   const names = useMemo(() => mentionNames ?? [], [mentionNames]);
 
@@ -62,22 +64,40 @@ function BubbleBase({ message: m, mine, showSender, mentionNames, status, onLong
   const files = (m.attachments || []).filter((a) => a.kind === 'FILE');
   const mentionedMe = m.mentionIds?.includes(myId);
 
+  // Qrup söhbətində başqasının mesajı: solda profil şəkli (seriyanın son mesajında), toxunanda profil açılır
+  const withAvatar = !mine && showSender;
+  const openProfile = () => m.sender?.id && onOpenProfile?.(m.sender);
+  // Yeni gələn/göndərilən mesaj: aşağıdan süzülərək və yavaşca böyüyərək görünür (köhnə tarixçə animasiyasız)
+  const Wrap = fresh ? FadeIn : PlainWrap;
   return (
-    <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginVertical: 2, paddingHorizontal: 10 }}>
+    <Wrap from="bottom" distance={16} duration={300}>
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginVertical: 2, paddingHorizontal: 10, justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+      {withAvatar ? (
+        <View style={{ width: 34, marginBottom: m.reactions?.length ? 16 : 0 }}>
+          {showAvatar ? (
+            <Pressable onPress={openProfile} accessibilityRole="button" accessibilityLabel={`${m.sender?.fullName} profili`}>
+              <Avatar name={m.sender?.fullName} id={m.sender?.id} uri={m.sender?.avatarUrl} size={34} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', flexShrink: 1, maxWidth: '84%' }}>
       <Pressable
         onLongPress={() => onLongPress?.(m)}
         delayLongPress={300}
         // Web: sağ klik də əməliyyatları açır
         {...(Platform.OS === 'web' ? { onContextMenu: (e) => { e.preventDefault?.(); onLongPress?.(m); } } : {})}
         style={{
-          maxWidth: '82%', minWidth: 90, borderRadius: 16, padding: 9, paddingBottom: 6, backgroundColor: bg,
+          minWidth: 90, borderRadius: 16, padding: 9, paddingBottom: 6, backgroundColor: bg,
           borderTopRightRadius: mine ? 4 : 16, borderTopLeftRadius: mine ? 16 : 4,
           borderWidth: mentionedMe && !mine ? 1.5 : 0, borderColor: colors.brand,
           shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1,
         }}
       >
-        {!mine && showSender ? (
-          <Text style={{ color: nameColor(m.sender?.id), fontWeight: '700', fontSize: 13.5, marginBottom: 2 }}>{m.sender?.fullName}</Text>
+        {!mine && showSender && showName ? (
+          <Pressable onPress={openProfile} disabled={!onOpenProfile} hitSlop={4}>
+            <Text style={{ color: nameColor(m.sender?.id), fontWeight: '700', fontSize: 13.5, marginBottom: 2 }}>{m.sender?.fullName}</Text>
+          </Pressable>
         ) : null}
 
         {m.deleted ? (
@@ -152,9 +172,13 @@ function BubbleBase({ message: m, mine, showSender, mentionNames, status, onLong
           ))}
         </View>
       )}
+      </View>
     </View>
+    </Wrap>
   );
 }
+
+const PlainWrap = ({ children }) => children;
 
 function Ticks({ status, colors, onRetry }) {
   if (status === 'pending') return <Clock size={13} color={colors.faint} />;

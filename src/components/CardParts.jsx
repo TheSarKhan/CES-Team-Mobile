@@ -62,7 +62,7 @@ export function CardRow({ card, selected, onPress }) {
         {card.assignee ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <User size={13} color={colors.muted} />
-            <Text style={{ color: colors.ink2, fontSize: 12.5, fontWeight: '600' }}>{card.assignee.fullName.split(' ')[0]}</Text>
+            <Text style={{ color: colors.ink2, fontSize: 12.5, fontWeight: '600' }}>{card.assignee.fullName.split(' ')[0]}{(card.assignees?.length || 0) > 1 ? ` +${card.assignees.length - 1}` : ''}</Text>
           </View>
         ) : <Text style={{ color: colors.faint, fontSize: 12 }}>Məsul yoxdur</Text>}
       </View>
@@ -94,7 +94,7 @@ export function CardMessage({ message, onOpen }) {
           {c.subtitle ? <Text style={{ color: colors.ink2, fontSize: 13.5, flexShrink: 1 }}>{c.subtitle}</Text> : null}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 8 }}>
-          <Text style={{ color: colors.muted, fontSize: 13.5 }}>Məsul: <Text style={{ color: colors.ink, fontWeight: '700' }}>{c.assignee?.fullName?.split(' ')[0] || '—'}</Text></Text>
+          <Text style={{ color: colors.muted, fontSize: 13.5 }}>Məsul: <Text style={{ color: colors.ink, fontWeight: '700' }}>{c.assignee?.fullName?.split(' ')[0] || '—'}{(c.assignees?.length || 0) > 1 ? ` +${c.assignees.length - 1}` : ''}</Text></Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
             <Text style={{ color: colors.brand, fontWeight: '700', fontSize: 14 }}>Karta bax</Text>
             <ChevronRight size={17} color={colors.brand} />

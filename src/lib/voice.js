@@ -2,18 +2,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, createAudioPlayer } from 'expo-audio';
 
+import { emptyLevels, pushLevel, dbToLevel } from './levels';
+
 export const MAX_VOICE_MS = 5 * 60 * 1000;
 
-/** start() → yazmağa başlayır; stop() → {uri,name,mimeType,durationMs}; cancel() → atır. */
+/**
+ * start() → yazmağa başlayır; pause()/resume() → fasilə; stop() → {uri,name,mimeType,durationMs}; cancel() → atır.
+ * levels: son səviyyələr (0..1) — canlı dalğa üçün.
+ */
 export function useVoiceRecorder() {
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const startedAt = useRef(0);
+  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+  const accum = useRef(0); // fasilələrdən əvvəlki yığılmış müddət
+  const seg = useRef(0); // cari hissənin başlanğıcı
   const timer = useRef(null);
+  const pausedRef = useRef(false);
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [levels, setLevels] = useState(emptyLevels);
 
   const clear = () => { if (timer.current) clearInterval(timer.current); timer.current = null; };
   useEffect(() => clear, []);
+  const elapsed = () => accum.current + (pausedRef.current ? 0 : Date.now() - seg.current);
 
   const start = useCallback(async () => {
     const perm = await requestRecordingPermissionsAsync();
@@ -21,16 +31,43 @@ export function useVoiceRecorder() {
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
-    startedAt.current = Date.now();
+    accum.current = 0;
+    seg.current = Date.now();
+    pausedRef.current = false;
+    setPaused(false);
     setElapsedMs(0);
+    setLevels(emptyLevels());
     setRecording(true);
-    timer.current = setInterval(() => setElapsedMs(Date.now() - startedAt.current), 200);
+    timer.current = setInterval(() => {
+      setElapsedMs(elapsed());
+      if (pausedRef.current) return;
+      let db; try { db = recorder.getStatus().metering; } catch { /* hələ hazır deyil */ }
+      setLevels((l) => pushLevel(l, dbToLevel(db)));
+    }, 80);
+  }, [recorder]);
+
+  const pause = useCallback(() => {
+    if (pausedRef.current) return;
+    accum.current += Date.now() - seg.current;
+    pausedRef.current = true;
+    setPaused(true);
+    try { recorder.pause(); } catch { /* ignore */ }
+  }, [recorder]);
+
+  const resume = useCallback(() => {
+    if (!pausedRef.current) return;
+    seg.current = Date.now();
+    pausedRef.current = false;
+    setPaused(false);
+    try { recorder.record(); } catch { /* ignore */ }
   }, [recorder]);
 
   const finish = useCallback(async () => {
     clear();
-    const durationMs = Date.now() - startedAt.current;
+    const durationMs = elapsed();
     setRecording(false);
+    setPaused(false);
+    pausedRef.current = false;
     try { await recorder.stop(); } catch { /* artıq dayanıb */ }
     await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
     return { uri: recorder.uri, durationMs };
@@ -44,7 +81,7 @@ export function useVoiceRecorder() {
 
   const cancel = useCallback(async () => { await finish(); }, [finish]);
 
-  return { recording, elapsedMs, start, stop, cancel };
+  return { recording, paused, elapsedMs, levels, start, pause, resume, stop, cancel };
 }
 
 // Eyni anda yalnız bir səs çalınsın

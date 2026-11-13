@@ -32,6 +32,9 @@ export const useConversation = (id, enabled) =>
 
 export const useUsers = () => useQuery({ queryKey: qk.users, queryFn: meApi.users, staleTime: 5 * 60_000 });
 
+export const useUser = (id) => useQuery({ queryKey: ['user', id], queryFn: () => meApi.user(id), enabled: id != null, staleTime: 5 * 60_000 });
+export const useMe = (uid) => useQuery({ queryKey: ['me', uid], queryFn: meApi.me, enabled: uid != null, staleTime: 30 * 60_000 });
+
 export const useMembers = (id) =>
   useQuery({ queryKey: qk.members(id), queryFn: () => chatApi.members(id), enabled: id != null, staleTime: 60_000 });
 

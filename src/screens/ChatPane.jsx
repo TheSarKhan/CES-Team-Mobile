@@ -3,14 +3,16 @@ import { View, Text, FlatList, Pressable, Platform, Linking, KeyboardAvoidingVie
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import { ArrowLeft, MoreVertical, Pin, CornerUpLeft, Copy, Pencil, Trash2, BellOff, SquarePlus } from 'lucide-react-native';
+import { ArrowLeft, Pin, CornerUpLeft, Copy, Pencil, Trash2, BellOff } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import { Avatar } from '../components/Avatar';
 import { MessageBubble } from '../components/MessageBubble';
 import { Composer } from '../components/Composer';
 import { ActionSheet } from '../components/ActionSheet';
 import { ImageViewer } from '../components/ImageViewer';
-import { GroupInfo } from './GroupInfo';
+import { ProfileSheet } from '../components/ProfileSheet';
+import { InfoDialog } from './InfoDialog';
+import { FadeIn, TypingDots } from '../components/motion';
 import { Empty } from '../components/ui';
 import { CardMessage } from '../components/CardParts';
 import { CardForm } from './CardForm';
@@ -48,7 +50,8 @@ export function ChatPane({ id, onBack, embedded = false }) {
   const [editing, setEditing] = useState(null);
   const [sheet, setSheet] = useState(null);
   const [viewer, setViewer] = useState(null);
-  const [info, setInfo] = useState(false);
+  const [info, setInfo] = useState(false); // kompüterdə məlumat pəncərəsi (söhbət arxada görünür)
+  const [profile, setProfile] = useState(null); // {id, fullName, avatarUrl}
   const [toast, setToast] = useState(null);
   const listRef = useRef(null);
 
@@ -63,6 +66,9 @@ export function ChatPane({ id, onBack, embedded = false }) {
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3500); return () => clearTimeout(t); } }, [toast]);
 
   const messages = msgsQ.data?.list ?? [];
+  // Açılışda gələn və yuxarı sürüşdürəndə yüklənən tarixçə animasiyasız; yeni mesajlar animasiyalı görünür
+  const seen = useRef(null);
+  if (seen.current === null && msgsQ.data) seen.current = { maxId: messages.reduce((x, m) => Math.max(x, m.id), 0) };
   const lastServerId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) if (messages[i].id > 0 && !messages[i].pending) return messages[i].id;
     return 0;
@@ -96,8 +102,12 @@ export function ChatPane({ id, onBack, embedded = false }) {
     const out = [];
     for (let i = messages.length - 1; i >= 0; i--) {
       const m = messages[i];
-      out.push({ key: `m${m.id}-${m.clientId || ''}`, type: 'msg', m });
       const prev = messages[i - 1];
+      const next = messages[i + 1];
+      // Eyni göndərənin ardıcıl mesajları bir seriyadır: ad seriyanın əvvəlində, şəkil sonunda görünür
+      const sameRun = (a, b) => a && b && a.type !== 'SYSTEM' && a.type !== 'CARD' && b.type !== 'SYSTEM' && b.type !== 'CARD'
+        && a.sender?.id === b.sender?.id && dayKey(a.createdAt) === dayKey(b.createdAt);
+      out.push({ key: `m${m.clientId || m.id}`, type: 'msg', m, fresh: !!seen.current && (m.id < 0 || m.id > seen.current.maxId), first: !sameRun(prev, m), last: !sameRun(m, next) });
       if (!prev || dayKey(prev.createdAt) !== dayKey(m.createdAt)) out.push({ key: `d${m.id}`, type: 'day', label: dayLabel(m.createdAt) });
     }
     return out;
@@ -105,6 +115,13 @@ export function ChatPane({ id, onBack, embedded = false }) {
 
   const isGroup = conv?.type === 'GROUP';
   const showSender = conv?.type !== 'DIRECT';
+  const openProfile = (u) => u?.id && setProfile(u);
+  const messageUser = async (uid) => {
+    const c = await chatApi.openDirect(uid);
+    qc.invalidateQueries({ queryKey: qk.conversations });
+    setProfile(null);
+    router.navigate(isWide ? `/chats?c=${c.id}` : `/chat/${c.id}`);
+  };
   const typingNames = Object.entries(typingMap || {})
     .filter(([uid, ts]) => Number(uid) !== myId && now - ts < 4000)
     .map(([uid]) => memberById[uid]?.user.fullName?.split(' ')[0]).filter(Boolean);
@@ -182,15 +199,19 @@ export function ChatPane({ id, onBack, embedded = false }) {
       {embedded ? null : <View style={{ paddingTop: Platform.OS === 'web' ? 0 : insets.top, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, height: 62 }}>
           {onBack ? <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Geri"><ArrowLeft size={24} color={colors.headerInk} /></Pressable> : null}
-          <Pressable onPress={() => setInfo(true)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Avatar name={title} id={conv?.otherUser?.id ?? conv?.id} size={40} group={isGroup} />
+          <Pressable onPress={() => (isWide ? setInfo(true) : router.push(`/info/${id}`))} accessibilityRole="button" accessibilityLabel="Söhbət məlumatları" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Avatar name={title} id={conv?.otherUser?.id ?? conv?.id} uri={conv?.otherUser?.avatarUrl ?? conv?.avatarUrl} size={40} group={isGroup} />
             <View style={{ flex: 1 }}>
               <Text numberOfLines={1} style={{ color: colors.headerInk, fontWeight: '700', fontSize: 17 }}>{title}</Text>
-              {subtitle ? <Text numberOfLines={1} style={{ color: typingNames.length ? colors.brand : colors.muted, fontSize: 12.5 }}>{subtitle}</Text> : null}
+              {typingNames.length ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text numberOfLines={1} style={{ color: colors.brand, fontSize: 12.5, flexShrink: 1 }}>{typingNames.join(', ')} yazır</Text>
+                  <TypingDots color={colors.brand} size={4} />
+                </View>
+              ) : subtitle ? <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12.5 }}>{subtitle}</Text> : null}
             </View>
           </Pressable>
           {conv?.muted ? <BellOff size={18} color={colors.muted} /> : null}
-          <Pressable onPress={() => setInfo(true)} hitSlop={10} accessibilityLabel="Məlumat"><MoreVertical size={22} color={colors.headerInk} /></Pressable>
         </View>
         {conv?.pinnedMessage ? (
           <Pressable onPress={() => jumpTo(conv.pinnedMessage.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, height: 46, backgroundColor: colors.brandTint }}>
@@ -223,9 +244,13 @@ export function ChatPane({ id, onBack, embedded = false }) {
         ) : (
           <MessageBubble
             message={item.m}
+            fresh={item.fresh}
             mine={item.m.sender?.id === myId}
             myId={myId}
             showSender={showSender}
+            showName={item.first}
+            showAvatar={item.last}
+            onOpenProfile={openProfile}
             mentionNames={(item.m.mentionIds || []).map((u) => memberById[u]?.user.fullName).filter(Boolean)}
             status={item.m.sender?.id === myId ? statusOf(item.m) : undefined}
             onLongPress={openActions}
@@ -240,17 +265,13 @@ export function ChatPane({ id, onBack, embedded = false }) {
 
       {toast ? (
         <View style={{ position: 'absolute', left: 20, right: 20, bottom: 90, alignItems: 'center' }} pointerEvents="none">
-          <Text style={{ backgroundColor: '#111', color: '#fff', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 18, overflow: 'hidden', fontSize: 13.5 }}>{toast}</Text>
+          <FadeIn key={toast} from="bottom" distance={18}>
+            <Text style={{ backgroundColor: '#111', color: '#fff', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 18, overflow: 'hidden', fontSize: 13.5 }}>{toast}</Text>
+          </FadeIn>
         </View>
       ) : null}
 
       <View style={{ paddingBottom: Platform.OS === 'web' || embedded ? 0 : insets.bottom }}>
-        {isGroup && !embedded ? (
-          <Pressable onPress={() => setCardForm(true)} accessibilityRole="button" accessibilityLabel="Kart yarat"
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, marginHorizontal: 10, marginBottom: 4, borderRadius: 14, borderWidth: 1.5, borderColor: colors.brand, backgroundColor: colors.surface }}>
-            <SquarePlus size={19} color={colors.brand} /><Text style={{ color: colors.brand, fontWeight: '800', fontSize: 15 }}>Kart yarat</Text>
-          </Pressable>
-        ) : null}
         <Composer
           key={id}
           conversationId={Number(id)}
@@ -263,6 +284,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
           onSend={send}
           onEdit={doEdit}
           onError={setToast}
+          onCreateCard={isGroup && !embedded ? () => setCardForm(true) : undefined}
         />
       </View>
 
@@ -282,7 +304,8 @@ export function ChatPane({ id, onBack, embedded = false }) {
       />
       {viewer ? <ImageViewer images={viewer.images} startId={viewer.startId} onClose={() => setViewer(null)} /> : null}
       {cardForm ? <CardForm groupId={Number(id)} onClose={() => setCardForm(false)} onDone={(cid) => { setCardForm(false); openCard(cid); }} /> : null}
-      {info && conv ? <GroupInfo conv={conv} members={members} onClose={() => setInfo(false)} /> : null}
+      {info ? <InfoDialog id={id} onClose={() => setInfo(false)} /> : null}
+      {profile ? <ProfileSheet userId={profile.id} initial={profile} onClose={() => setProfile(null)} onMessage={messageUser} /> : null}
     </KeyboardAvoidingView>
   );
 }

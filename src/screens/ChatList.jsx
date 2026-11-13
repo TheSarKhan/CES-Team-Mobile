@@ -11,6 +11,7 @@ import { errorMessage } from '../api/client';
 import { useAuthStore } from '../store/auth';
 import { qk, useConversations, useUsers } from '../hooks/useChat';
 import { listTime, messagePreview, hhmm } from '../lib/format';
+import { FadeIn, PressableScale } from '../components/motion';
 
 function Row({ c, selected, onPress, myId }) {
   const { colors } = useTheme();
@@ -19,8 +20,8 @@ function Row({ c, selected, onPress, myId }) {
   const system = last?.type === 'SYSTEM';
   const prefix = !last || last.deleted || system ? '' : last.sender?.id === myId ? 'Siz: ' : c.type === 'GROUP' ? `${(last.sender?.fullName || '').split(' ')[0]}: ` : '';
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: selected ? colors.brandTint : pressed ? colors.sunk : 'transparent' })}>
-      <Avatar name={c.name} id={c.otherUser?.id ?? c.id} size={52} group={c.type === 'GROUP'} />
+    <PressableScale onPress={onPress} scaleTo={0.97} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: selected ? colors.brandTint : 'transparent' }}>
+      <Avatar name={c.name} id={c.otherUser?.id ?? c.id} uri={c.otherUser?.avatarUrl ?? c.avatarUrl} size={52} group={c.type === 'GROUP'} />
       <View style={{ flex: 1, gap: 3 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text numberOfLines={1} style={{ flex: 1, color: colors.ink, fontWeight: '700', fontSize: 16.5 }}>{c.name}</Text>
@@ -35,7 +36,7 @@ function Row({ c, selected, onPress, myId }) {
           <Badge count={c.unreadCount} tone={c.muted ? 'gray' : 'brand'} />
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -83,7 +84,7 @@ function NewChat({ onClose, onOpen }) {
               const on = pick.includes(u.id);
               return (
                 <Pressable key={u.id} disabled={busy} onPress={() => (mode === 'direct' ? openDirect(u) : setPick((p) => (on ? p.filter((x) => x !== u.id) : [...p, u.id])))} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 }}>
-                  <Avatar name={u.fullName} id={u.id} size={40} />
+                  <Avatar name={u.fullName} id={u.id} uri={u.avatarUrl} size={40} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.ink, fontWeight: '600', fontSize: 15.5 }}>{u.fullName}</Text>
                     {u.position || u.department ? <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 12.5 }}>{u.position || u.department}</Text> : null}
@@ -153,7 +154,11 @@ export function ChatList({ selectedId, onOpen }) {
         data={list}
         keyExtractor={(c) => String(c.id)}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={q.refetch} tintColor={colors.brand} />}
-        renderItem={({ item }) => <Row c={item} myId={me?.id} selected={String(item.id) === String(selectedId)} onPress={() => onOpen(item.id)} />}
+        renderItem={({ item, index }) => {
+          const row = <Row c={item} myId={me?.id} selected={String(item.id) === String(selectedId)} onPress={() => onOpen(item.id)} />;
+          // siyahı açılanda ilk sətirlər ardıcıl süzülür
+          return index < 9 ? <FadeIn delay={index * 55} distance={12}>{row}</FadeIn> : row;
+        }}
         ListEmptyComponent={q.isLoading ? null : q.isError ? <Empty title="Yüklənmədi" sub={errorMessage(q.error)} /> : (
           <Empty title={term ? 'Heç nə tapılmadı' : 'Hələ söhbət yoxdur'} sub={term ? undefined : 'Qrup admin tərəfindən sizə əlavə ediləndə burada görünəcək. Və ya + ilə yeni söhbət başladın.'}>
             <Users size={40} color={colors.faint} />

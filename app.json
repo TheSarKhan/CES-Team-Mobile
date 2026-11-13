@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#103E31"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": false,
@@ -37,7 +37,7 @@
       "name": "CES Team",
       "shortName": "CES Team",
       "lang": "az",
-      "themeColor": "#103E31",
+      "themeColor": "#FFFFFF",
       "description": "CES komandasının daxili iş və söhbət tətbiqi."
     },
     "plugins": [
@@ -67,6 +67,13 @@
         }
       ],
       "expo-document-picker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Şəkil çəkib göndərmək üçün kameraya giriş lazımdır.",
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-audio",
         {

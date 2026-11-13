@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
-import { Button, Chip } from '../components/ui';
+import { Button, SelectBox } from '../components/ui';
 import { FormFields } from '../components/FormFields';
 import { TypeTile } from '../components/CardParts';
 import { cardsApi } from '../api/endpoints';
@@ -19,7 +19,7 @@ const empty = (v) => v == null || v === '' || (Array.isArray(v) && v.length === 
 const blankRow = (r) => !r || Object.values(r).every((x) => x == null || String(x).trim() === '');
 
 /** Çoxaddımlı forma. card verilibsə redaktədir. */
-export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, card }) {
+export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, card, prefill }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
@@ -31,7 +31,7 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
   const [groupId, setGroupId] = useState(card?.groupId ?? groupProp ?? null);
   const [type, setType] = useState(card?.summary?.type ?? typeProp ?? null);
   const [step, setStep] = useState(0);
-  const [values, setValues] = useState(() => ({ ...(card?.fields || {}), ...(card ? { assignee: card.summary.assignee?.id ?? card.summary.assignee?.fullName ?? null } : {}) }));
+  const [values, setValues] = useState(() => ({ ...(card?.fields || {}), ...(card ? { assignees: (card.summary.assignees || []).map((a) => a.id ?? a.fullName) } : {}), ...(prefill || {}) }));
   const [errors, setErrors] = useState({});
   const [banner, setBanner] = useState('');
   const [busy, setBusy] = useState(false);
@@ -58,7 +58,8 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
           const rows = (v || []).filter((r) => !blankRow(r));
           if (!rows.length) { if (f.required) errs[prefix + f.key] = `${f.label} məcburidir`; }
           else if (rows.some((r) => f.fields.some((sf) => sf.required && empty(r[sf.key])))) errs[prefix + f.key] = 'Hər sətirdə ' + f.fields.filter((x) => x.required).map((x) => x.label.toLowerCase()).join(' və ') + ' yazın';
-          else if (rows.some((r) => f.fields.some((sf) => sf.kind === 'NUMBER' && Number.isNaN(Number(String(r[sf.key] ?? '0').replace(',', '.')))))) errs[prefix + f.key] = 'Rəqəm daxil edin';
+          else if (rows.some((r) => f.fields.some((sf) => (sf.kind === 'NUMBER' || sf.kind === 'MONEY') && !empty(r[sf.key]) && Number.isNaN(Number(String(r[sf.key]).replace(',', '.')))))) errs[prefix + f.key] = 'Rəqəm daxil edin';
+          else if (rows.some((r) => f.fields.some((sf) => sf.kind === 'DATE' && typeof r[sf.key] === 'string' && r[sf.key].startsWith('?')))) errs[prefix + f.key] = 'Tarixi GG.AA.İİİİ formatında yazın';
           continue;
         }
         if (f.required && empty(v)) errs[prefix + f.key] = `${f.label} məcburidir`;
@@ -76,23 +77,47 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
     for (const s of steps) for (const f of s.fields) {
       let v = values[f.key];
       if (f.kind === 'DATE') v = empty(v) ? null : (displayToIso(v) ?? v);
-      if (f.kind === 'ROWS') v = (v || []).filter((r) => !blankRow(r));
+      if (f.kind === 'ROWS') {
+        v = (v || []).filter((r) => !blankRow(r)).map((r) => {
+          const o = { ...r };
+          for (const sf of f.fields) if (sf.kind === 'DATE') o[sf.key] = empty(o[sf.key]) ? null : (displayToIso(o[sf.key]) ?? o[sf.key]);
+          return o;
+        });
+      }
       out[f.key] = v;
     }
     return out;
   };
+
+  // Məcburi sahəsi olmayan addım «Keç» ilə atlana bilər
+  const optional = !!cur && !visibleFields(cur.fields, values).some((f) => f.required);
+  const skip = () => { setBanner(''); setStep((x) => Math.min(x + 1, steps.length - 1)); };
 
   const next = async () => {
     setBanner('');
     if (!editing && !effGroup) { setBanner(NO_GROUP); return; }
     if (!validateStep()) return;
     if (!last) { setStep(step + 1); return; }
+    await save();
+  };
+
+  // Redaktədə istənilən addımdan «Yadda saxla»: bütün addımlar yoxlanılır
+  const save = async () => {
+    setBanner('');
+    if (editing) {
+      for (let i = 0; i < steps.length; i++) {
+        const errs = {};
+        for (const f of visibleFields(steps[i].fields, values)) if (f.required && empty(values[f.key]) && f.kind !== 'ROWS' && f.kind !== 'BLOCK') errs[f.key] = `${f.label} məcburidir`;
+        if (Object.keys(errs).length) { setStep(i); setErrors(errs); return; }
+      }
+    }
     setBusy(true);
     try {
       let id;
       if (editing) { await cardsApi.update(card.summary.id, payload()); id = card.summary.id; }
       else { const c = await cardsApi.create({ type: def.type, groupId: effGroup, fields: payload() }); id = c.summary.id; }
       qc.invalidateQueries({ queryKey: ['cards'] });
+      qc.invalidateQueries({ queryKey: ['registry'] }); // yeni müştəri/texnika/ərazi reyestrə düşdü
       qc.invalidateQueries({ queryKey: ['card'] });
       qc.invalidateQueries({ queryKey: ['card-summary'] });
       onDone?.(id);
@@ -115,10 +140,17 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
               </Pressable>
               {def ? <TypeTile type={def.type} size={40} /> : null}
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 22 }}>{editing ? 'Kartı redaktə et' : title}</Text>
-                {steps.length > 1 ? <Text style={{ color: colors.muted, fontSize: 13 }}>Addım {step + 1} / {steps.length}{cur?.title && editing ? ` · ${cur.title}` : ''}</Text> : null}
+                <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 20 }}>{editing ? 'Kartı redaktə et' : def ? def.label : 'Yeni kart'}</Text>
+                {steps.length > 1 ? <Text style={{ color: colors.muted, fontSize: 13 }}>Addım {step + 1} / {steps.length}</Text> : null}
               </View>
             </View>
+            {steps.length > 1 && def ? (
+              <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: 16, paddingBottom: 6 }} accessibilityLabel={`Addım ${step + 1} / ${steps.length}`}>
+                {steps.map((_, i) => (
+                  <Pressable key={i} disabled={!editing && i > step} onPress={() => (editing || i < step) && setStep(i)} hitSlop={{ top: 8, bottom: 8 }} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: i <= step ? colors.brand : colors.line }} />
+                ))}
+              </View>
+            ) : null}
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }} keyboardShouldPersistTaps="handled">
               {loading ? (
@@ -143,13 +175,13 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
               ) : (
                 <>
                   {!editing && !convsQ.isLoading && !effGroup ? <Text accessibilityRole="alert" style={{ color: colors.red, fontSize: 14, marginBottom: 12 }}>{NO_GROUP}</Text> : null}
-                  {!editing && cur?.subtitle ? <Text style={{ color: colors.muted, fontSize: 14.5, marginBottom: 14 }}>{cur.subtitle}</Text> : null}
+                  <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 25, marginBottom: cur?.subtitle ? 4 : 14 }}>{cur?.title}</Text>
+                  {cur?.subtitle ? <Text style={{ color: colors.muted, fontSize: 14.5, marginBottom: 14 }}>{cur.subtitle}</Text> : null}
                   {!editing && step === 0 && groups.length > 1 && !groupProp ? (
                     <View style={{ marginBottom: 16 }}>
                       <Text style={{ color: colors.ink2, fontWeight: '700', fontSize: 13.5, marginBottom: 6 }}>Qrup</Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                        {groups.map((g) => <Chip key={g.id} label={g.name} active={effGroup === g.id} onPress={() => { setGroupId(g.id); set('assignee', null); }} />)}
-                      </View>
+                      <SelectBox value={effGroup == null ? '' : String(effGroup)} options={groups.map((g) => ({ value: String(g.id), label: g.name }))}
+                        onChange={(x) => { if (x) { setGroupId(Number(x)); set('assignees', []); } }} clearable={false} />
                     </View>
                   ) : null}
                   <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.line }}>
@@ -160,8 +192,10 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
               )}
             </ScrollView>
 
-            {def || editing ? <View style={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 12, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg }}>
-              <Button onPress={next} loading={busy} disabled={loading || !def}>
+            {def || editing ? <View style={{ flexDirection: 'row', gap: 10, padding: 16, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 12, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg }}>
+              {!last && optional ? <Button variant="ghost" onPress={skip} disabled={busy} style={{ flex: 1 }}>Keç</Button> : null}
+              {editing && !last ? <Button variant="ghost" onPress={() => save()} loading={busy} disabled={loading || !def} style={{ flex: 1 }}>Yadda saxla</Button> : null}
+              <Button onPress={next} loading={busy && (last || !editing)} disabled={loading || !def} style={{ flex: 2 }}>
                 {last ? (editing ? 'Yadda saxla' : 'Kartı yarat') : 'Davam et →'}
               </Button>
             </View> : null}

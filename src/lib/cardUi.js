@@ -1,7 +1,7 @@
-import { FileSearch, Wrench, Fuel, Banknote, Wallet, FileText } from 'lucide-react-native';
+import { FileSearch, Wrench, Fuel, Banknote, Wallet, FileText, Truck, Receipt, ClipboardList } from 'lucide-react-native';
 import { isoToDisplay } from './dates';
 
-export const TYPE_ICONS = { 'file-search': FileSearch, wrench: Wrench, fuel: Fuel, banknote: Banknote, wallet: Wallet };
+export const TYPE_ICONS = { 'file-search': FileSearch, wrench: Wrench, fuel: Fuel, banknote: Banknote, wallet: Wallet, truck: Truck, receipt: Receipt, 'clipboard-list': ClipboardList };
 export const iconFor = (def) => TYPE_ICONS[def?.icon] || FileText;
 
 /** tone → {fg, bg}. bg = rəngin şəffaf tonu (açıq və tünd temada işləyir). */
@@ -24,6 +24,7 @@ export function displayValue(field, v) {
   if (v == null || v === '') return '';
   switch (field.kind) {
     case 'DATE': return isoToDisplay(v);
+    case 'BOOL': return v ? 'Bəli' : '';
     case 'SELECT': return optLabel(field, v);
     case 'MONEY': return money(v);
     case 'NUMBER': return `${String(v).replace('.', ',')}${field.suffix ? ' ' + field.suffix : ''}`;
@@ -52,7 +53,7 @@ const fmtNum = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
 /** Növə görə hesablanmış sətirlər: [[etiket, mətn]] */
 export function computedRows(type, fields) {
   if (!fields) return [];
-  if (type === 'REQUEST') {
+  if (type === 'ORDER') {
     const t = totals(fields);
     return t && Number(fields.price) > 0 ? [['Ümumi (ƏDV ilə)', money(t.total), true]] : [];
   }

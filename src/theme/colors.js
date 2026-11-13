@@ -14,22 +14,23 @@ const base = {
 export const light = {
   ...base,
   scheme: 'light',
-  bg: '#F4F5F7',
+  forest: '#15A34A',      // "tünd yaşıl" əvəzinə parlaq brend yaşıl (qrup avatarı, aktiv çip, düymələr)
+  bg: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceAlt: '#FAFBFC',
-  sunk: '#EEF0F3',
+  surfaceAlt: '#F8F9FA',
+  sunk: '#F1F3F5',
   line: '#E7E9ED',
   ink: '#15181D',
   ink2: '#3D434C',
   muted: '#6B727D',
   faint: '#9AA1AC',
-  brandTint: '#E6F6EC',
+  brandTint: '#E8F7EE',
   brandLine: '#BBE6C9',
-  mine: '#DDF3E4',       // öz mesaj baloncuğu
+  mine: '#DCF5E3',       // öz mesaj baloncuğu
   theirs: '#FFFFFF',
   header: '#FFFFFF',
-  headerInk: '#103E31',
-  chatBg: '#F1F3F0',
+  headerInk: '#15181D',
+  chatBg: '#F5F6F7',
   onBrand: '#FFFFFF',
   shadow: 'rgba(16,62,49,0.10)',
 };

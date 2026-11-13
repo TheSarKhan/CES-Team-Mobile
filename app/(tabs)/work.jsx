@@ -16,7 +16,7 @@ function Tile({ Icon, value, label, tone, onPress }) {
   const { colors } = useTheme();
   return (
     <Pressable onPress={onPress} style={{ flex: 1, minWidth: 0, backgroundColor: tone ? colors.brandTint : colors.surface, borderRadius: 18, padding: 14, gap: 6, borderWidth: 1, borderColor: tone ? colors.brandLine : colors.line }}>
-      <Icon size={24} color={colors.forest === '#103E31' && colors.scheme === 'dark' ? colors.brand : colors.forest} />
+      <Icon size={24} color={colors.brand} />
       <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 26 }}>{value}</Text>
       <Text style={{ color: colors.ink2, fontSize: 12, fontWeight: '600' }}>{label}</Text>
     </Pressable>
