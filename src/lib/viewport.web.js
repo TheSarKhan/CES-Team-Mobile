@@ -44,17 +44,13 @@ export function fixMobileViewport() {
   const root = document.getElementById('root');
   if (!vv || !root || !window.matchMedia?.('(pointer: coarse)').matches) return () => {};
 
-  // iPhone ana ekran tətbiqi: innerHeight ekrandan status bar qədər (məs. 812 ↔ 874) kiçik bildirilir, tətbiq isə TAM ekranı (status barın altına qədər)
-  // tutur — aşağıda boş zolaq qalırdı. Fərq (gap) həm klaviaturasız, həm klaviaturalı halda görünən sahəyə əlavə olunur.
-  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const apply = () => {
-    const gap = standalone ? Math.max(0, Math.min(screen.height - window.innerHeight, 80)) : 0;
     const kb = window.innerHeight - vv.height > 120;                    // klaviatura açıqdır
     root.style.position = 'fixed';
     root.style.left = `${vv.offsetLeft}px`;
     root.style.top = `${vv.offsetTop}px`;
     root.style.width = `${vv.width}px`;
-    root.style.height = `${vv.height + gap}px`;
+    root.style.height = `${vv.height}px`;
     document.documentElement.style.setProperty('--sab', kb ? '0' : '1'); // klaviatura üstündə home-indicator boşluğu lazım deyil
   };
   const reset = () => { window.scrollTo(0, 0); apply(); };
