@@ -1,41 +1,48 @@
-// iPhone ana ekran tətbiqi (PWA): klaviatura açılıb bağlanandan sonra səhifə yuxarı sürüşmüş qalır (başlıq status barın altına keçir,
-// aşağıda boş yer yaranır, son mesaj yazı sahəsinin altında kəsilir). Burada:
-//  1) kök hündürlüyü həqiqi görünən sahəyə (visualViewport) bərabərləşdirilir — klaviatura açıq olanda yazı sahəsi klaviaturanın üstündə qalır;
-//  2) səhifənin özü heç vaxt sürüşməsin deyə hər dəyişiklikdə yuxarı qaytarılır;
-//  3) klaviatura açıq olanda alt təhlükəsiz sahə boşluğu (--sab) söndürülür.
+// iPhone ana ekran tətbiqi (PWA): klaviatura açılıb bağlanandan sonra səhifə yuxarı sürüşmüş qalır
+// (başlıq status barın altına keçir, aşağıda boş yer yaranır, yazı sahəsi klaviaturanın altında qalır).
+// Həll: tətbiqin kökü (#root) HƏR ZAMAN həqiqi görünən sahəyə (visualViewport) bərabər yerləşdirilir —
+// sürüşmə nə qədər olursa olsun tətbiq görünən sahəni tam doldurur, klaviatura açıq olanda yazı sahəsi onun üstündə qalır.
 export function fixMobileViewport() {
   const vv = window.visualViewport;
   const root = document.getElementById('root');
-  if (!vv || !root) return () => {};
-  const touch = () => window.matchMedia?.('(pointer: coarse)').matches;
-  let raf = 0;
+  if (!vv || !root || !window.matchMedia?.('(pointer: coarse)').matches) return () => {};
+
+  const probe = document.createElement('div'); // klaviaturasız tam hündürlük (100lvh)
+  probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:100vh;height:100lvh;visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+
   const apply = () => {
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => {
-      if (!touch()) { root.style.height = ''; document.documentElement.style.setProperty('--sab', '1'); return; }
-      const kb = window.innerHeight - vv.height > 80; // klaviatura açıqdır
-      root.style.height = kb ? `${vv.height}px` : '';
-      document.documentElement.style.setProperty('--sab', kb ? '0' : '1');
-      if (window.scrollY !== 0 || document.documentElement.scrollTop !== 0 || document.body.scrollTop !== 0 || vv.offsetTop !== 0) {
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-      }
-    });
+    const full = Math.max(probe.offsetHeight, window.innerHeight);
+    const kb = full - vv.height > 120;                                  // klaviatura açıqdır
+    root.style.position = 'fixed';
+    root.style.left = `${vv.offsetLeft}px`;
+    root.style.top = `${vv.offsetTop}px`;
+    root.style.width = `${vv.width}px`;
+    root.style.height = `${vv.height}px`;
+    document.documentElement.style.setProperty('--sab', kb ? '0' : '1'); // klaviatura üstündə home-indicator boşluğu lazım deyil
   };
-  const onFocusOut = () => setTimeout(apply, 120);
+  const reset = () => { window.scrollTo(0, 0); apply(); };
+  const settle = () => { [0, 60, 180, 400, 800, 1400].forEach((t) => setTimeout(reset, t)); };   // iOS hadisələri gec/yarımçıq göndərə bilir
+
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
-  window.addEventListener('scroll', apply, { passive: true });
-  document.addEventListener('focusout', onFocusOut);
-  window.addEventListener('orientationchange', apply);
-  apply();
+  window.addEventListener('resize', apply);
+  window.addEventListener('orientationchange', settle);
+  window.addEventListener('pageshow', settle);
+  document.addEventListener('visibilitychange', settle);
+  document.addEventListener('focusout', settle);
+  document.addEventListener('focusin', settle);
+  settle();
   return () => {
     vv.removeEventListener('resize', apply);
     vv.removeEventListener('scroll', apply);
-    window.removeEventListener('scroll', apply);
-    document.removeEventListener('focusout', onFocusOut);
-    window.removeEventListener('orientationchange', apply);
-    cancelAnimationFrame(raf);
+    window.removeEventListener('resize', apply);
+    window.removeEventListener('orientationchange', settle);
+    window.removeEventListener('pageshow', settle);
+    document.removeEventListener('visibilitychange', settle);
+    document.removeEventListener('focusout', settle);
+    document.removeEventListener('focusin', settle);
+    probe.remove();
+    ['position', 'left', 'top', 'width', 'height'].forEach((k) => root.style.removeProperty(k));
   };
 }

@@ -18,10 +18,6 @@
     <style id="expo-reset">
       html,
       body {
-        /* səhifənin özü heç vaxt sürüşməsin (iPhone klaviaturasından sonra boş yer qalmasın) */
-        position: fixed;
-        inset: 0;
-        width: 100%;
         overscroll-behavior: none;
         height: 100%;
         /* iOS yazı ölçüsünü özbaşına böyütməsin; cəld iki dəfə toxunuşda yaxınlaşma olmasın (pinch qalır) */
@@ -32,10 +28,14 @@
       body {
         overflow: hidden;
       }
+      /* kök həmişə görünən sahəyə bərkidilir (telefonda JS visualViewport-a görə dəqiqləşdirir: viewport.web.js) */
       #root {
         display: flex;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
         height: 100%;
-        flex: 1;
       }
       /* iOS Safari: şrifti 16px-dən kiçik olan giriş sahəsinə fokus verəndə səhifəni yaxınlaşdırır
          (ana ekran tətbiqində bu yaxınlaşma qalır, yazılar kəsilir). Telefon enində 16px məcbur edilir. */
