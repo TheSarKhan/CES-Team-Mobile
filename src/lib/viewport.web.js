@@ -2,6 +2,43 @@
 // (başlıq status barın altına keçir, aşağıda boş yer yaranır, yazı sahəsi klaviaturanın altında qalır).
 // Həll: tətbiqin kökü (#root) HƏR ZAMAN həqiqi görünən sahəyə (visualViewport) bərabər yerləşdirilir —
 // sürüşmə nə qədər olursa olsun tətbiq görünən sahəni tam doldurur, klaviatura açıq olanda yazı sahəsi onun üstündə qalır.
+import { diagApi } from '../api/endpoints';
+import { buildId } from './appUpdate';
+
+let sent = 0;
+let lastSent = 0;
+function inset(side) {
+  const d = document.createElement('div');
+  d.style.cssText = `position:fixed;visibility:hidden;padding-${side}:env(safe-area-inset-${side},0px)`;
+  document.body.appendChild(d);
+  const v = parseFloat(getComputedStyle(d)[`padding${side[0].toUpperCase()}${side.slice(1)}`]) || 0;
+  d.remove();
+  return Math.round(v);
+}
+/** Layout problemini görmək üçün ölçüləri serverə göndər (səssiz; hər sessiyada ≤40 dəfə). */
+export function reportViewport(reason) {
+  const now = Date.now();
+  if (sent >= 40 || now - lastSent < 1200) return;
+  try { if (!window.localStorage.getItem('team_access_token')) return; } catch { return; }   // yalnız giriş etmiş istifadəçi
+  sent += 1; lastSent = now;
+  try {
+    const vv = window.visualViewport;
+    const root = document.getElementById('root');
+    const r = root?.getBoundingClientRect();
+    const a = document.activeElement;
+    diagApi.report({
+      reason, v: buildId(),
+      vvH: Math.round(vv?.height ?? 0), vvW: Math.round(vv?.width ?? 0), vvTop: Math.round(vv?.offsetTop ?? 0), vvScale: vv?.scale,
+      inner: `${innerWidth}x${innerHeight}`, outer: `${outerWidth}x${outerHeight}`, screen: `${screen.width}x${screen.height}`,
+      scrollY: Math.round(scrollY), docH: document.documentElement.scrollHeight, bodyH: document.body.scrollHeight, clientH: document.documentElement.clientHeight,
+      root: r ? `${Math.round(r.top)}+${Math.round(r.height)}` : null, rootStyle: root?.getAttribute('style'),
+      sat: inset('top'), sab: inset('bottom'), sabVar: getComputedStyle(document.documentElement).getPropertyValue('--sab').trim(),
+      standalone: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+      active: a?.tagName || null, path: location.pathname, ua: navigator.userAgent.slice(25, 90),
+    }).catch(() => {});
+  } catch { /* diaqnostika işləməsə də tətbiq işləsin */ }
+}
+
 export function fixMobileViewport() {
   const vv = window.visualViewport;
   const root = document.getElementById('root');
@@ -22,6 +59,7 @@ export function fixMobileViewport() {
     document.documentElement.style.setProperty('--sab', kb ? '0' : '1'); // klaviatura üstündə home-indicator boşluğu lazım deyil
   };
   const reset = () => { window.scrollTo(0, 0); apply(); };
+  const report = (why) => setTimeout(() => reportViewport(why), 700);
   const settle = () => { [0, 60, 180, 400, 800, 1400].forEach((t) => setTimeout(reset, t)); };   // iOS hadisələri gec/yarımçıq göndərə bilir
 
   vv.addEventListener('resize', apply);
@@ -42,7 +80,11 @@ export function fixMobileViewport() {
   document.addEventListener('focusout', onOut);
   document.addEventListener('focusin', settle);
   settle();
+  report('load');
+  const onAny = (e) => report(e.type);
+  ['focusin', 'focusout', 'visibilitychange', 'pageshow'].forEach((t) => document.addEventListener(t, onAny));
   return () => {
+    ['focusin', 'focusout', 'visibilitychange', 'pageshow'].forEach((t) => document.removeEventListener(t, onAny));
     vv.removeEventListener('resize', apply);
     vv.removeEventListener('scroll', apply);
     window.removeEventListener('resize', apply);

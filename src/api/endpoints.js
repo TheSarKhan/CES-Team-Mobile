@@ -90,6 +90,9 @@ export async function uploadFile({ uri, name, mimeType, kind, durationMs }) {
   return data;
 }
 
+// Telefon ekranı diaqnostikası (yalnız ölçülər): backend log-una yazılır
+export const diagApi = { report: (body) => post('/diag', body) };
+
 export const devicesApi = {
   register: (body) => post('/devices', body),
   unregister: (token) => post('/devices/unregister', { token }),
