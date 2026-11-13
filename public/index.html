@@ -18,6 +18,11 @@
     <style id="expo-reset">
       html,
       body {
+        /* səhifənin özü heç vaxt sürüşməsin (iPhone klaviaturasından sonra boş yer qalmasın) */
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        overscroll-behavior: none;
         height: 100%;
         /* iOS yazı ölçüsünü özbaşına böyütməsin; cəld iki dəfə toxunuşda yaxınlaşma olmasın (pinch qalır) */
         -webkit-text-size-adjust: 100%;

@@ -271,7 +271,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
         </View>
       ) : null}
 
-      <View style={{ paddingBottom: Platform.OS === 'web' || embedded ? 0 : insets.bottom }}>
+      <View style={{ paddingBottom: Platform.OS === 'web' ? 'calc(env(safe-area-inset-bottom, 0px) * var(--sab, 1))' : embedded ? 0 : insets.bottom }}>
         <Composer
           key={id}
           conversationId={Number(id)}
