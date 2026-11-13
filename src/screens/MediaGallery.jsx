@@ -11,6 +11,7 @@ import { VoiceBubble } from '../components/VoiceBubble';
 import { Chip, Button, Empty } from '../components/ui';
 import { FadeIn, PressableScale } from '../components/motion';
 import { dayLabel, fileSize } from '../lib/format';
+import { topPad, bottomPad } from '../lib/safe';
 
 const TABS = [['IMAGE', 'Şəkillər', 'images'], ['FILE', 'Fayllar', 'files'], ['VOICE', 'Səslər', 'voices']];
 
@@ -47,7 +48,7 @@ export function MediaGallery({ id, onBack }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ paddingTop: Platform.OS === 'web' ? 0 : insets.top, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+      <View style={{ paddingTop: topPad(insets, 0), backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, height: 58 }}>
           <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Geri"><ArrowLeft size={24} color={colors.headerInk} /></Pressable>
           <Text style={{ color: colors.headerInk, fontWeight: '800', fontSize: 19 }}>Media, fayllar və səslər</Text>

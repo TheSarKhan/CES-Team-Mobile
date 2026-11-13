@@ -9,6 +9,7 @@ import { CardRow } from '../components/CardParts';
 import { CardForm } from './CardForm';
 import { errorMessage } from '../api/client';
 import { useCards, useCardTypes } from '../hooks/useCards';
+import { topPad, bottomPad } from '../lib/safe';
 
 const FILTERS = [
   ['all', 'Hamısı'],
@@ -75,7 +76,7 @@ export function CardsList({ selectedId, onOpen, initialFilter }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ paddingTop: Platform.OS === 'web' ? 14 : insets.top + 6, paddingHorizontal: 14, paddingBottom: 8, gap: 10 }}>
+      <View style={{ paddingTop: topPad(insets, Platform.OS === 'web' ? 14 : 6), paddingHorizontal: 14, paddingBottom: 8, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Text style={{ flex: 1, color: colors.headerInk, fontWeight: '800', fontSize: 30 }}>Kartlar</Text>
           <Pressable onPress={() => setCreate(true)} accessibilityRole="button" accessibilityLabel="Kart yarat"

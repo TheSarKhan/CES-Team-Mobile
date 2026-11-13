@@ -13,6 +13,7 @@ import { useCardTypes } from '../hooks/useCards';
 import { useConversations, useMembers } from '../hooks/useChat';
 import { visibleFields } from '../lib/cardUi';
 import { displayToIso } from '../lib/dates';
+import { topPad, bottomPad } from '../lib/safe';
 
 const NO_GROUP = 'Siz heç bir qrupun üzvü deyilsiniz, ona görə kart yaratmaq olmur. Admin sizi Satış və ya Əməliyyat qrupuna əlavə etməlidir.';
 const empty = (v) => v == null || v === '' || (Array.isArray(v) && v.length === 0);
@@ -134,7 +135,7 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <View style={{ flex: 1, width: '100%', maxWidth: 640 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: Platform.OS === 'web' ? 18 : insets.top + 8, paddingBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: topPad(insets, Platform.OS === 'web' ? 18 : 8), paddingBottom: 8 }}>
               <Pressable onPress={step > 0 ? () => setStep(step - 1) : (!editing && !typeProp && defs.length > 1 && def ? () => setType(null) : onClose)} hitSlop={10} accessibilityLabel="Geri">
                 {step > 0 || (!editing && !typeProp && defs.length > 1 && def) ? <ArrowLeft size={24} color={colors.ink} /> : <X size={24} color={colors.ink} />}
               </Pressable>
@@ -192,7 +193,7 @@ export function CardForm({ onClose, onDone, groupId: groupProp, type: typeProp, 
               )}
             </ScrollView>
 
-            {def || editing ? <View style={{ flexDirection: 'row', gap: 10, padding: 16, paddingBottom: Platform.OS === 'web' ? 16 : insets.bottom + 12, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg }}>
+            {def || editing ? <View style={{ flexDirection: 'row', gap: 10, padding: 16, paddingBottom: bottomPad(insets, Platform.OS === 'web' ? 16 : 12), borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.bg }}>
               {!last && optional ? <Button variant="ghost" onPress={skip} disabled={busy} style={{ flex: 1 }}>Keç</Button> : null}
               {editing && !last ? <Button variant="ghost" onPress={() => save()} loading={busy} disabled={loading || !def} style={{ flex: 1 }}>Yadda saxla</Button> : null}
               <Button onPress={next} loading={busy && (last || !editing)} disabled={loading || !def} style={{ flex: 2 }}>

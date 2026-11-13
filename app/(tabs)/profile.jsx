@@ -20,6 +20,7 @@ import { registerForPushNotificationsAsync, getCurrentPushToken } from '../../sr
 import * as push from '../../src/lib/push';
 import { buildId, toggleHud } from '../../src/lib/appUpdate';
 import { dayLabel, hhmm, fileSize } from '../../src/lib/format';
+import { topPad, bottomPad } from '../../src/lib/safe';
 
 // ── kiçik quruluş blokları ──
 
@@ -344,7 +345,7 @@ export default function Profile() {
   );
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.surfaceAlt }} contentContainerStyle={{ padding: isWide ? 28 : 16, paddingTop: web ? 24 : insets.top + 12, alignItems: 'center', paddingBottom: 48 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.surfaceAlt }} contentContainerStyle={{ padding: isWide ? 28 : 16, paddingTop: topPad(insets, web ? 24 : 12), alignItems: 'center', paddingBottom: 48 }}>
       <View style={{ width: '100%', maxWidth: 1120, gap: 22 }}>
         <Text style={{ color: colors.ink, fontWeight: '800', fontSize: 34 }}>Profil</Text>
 

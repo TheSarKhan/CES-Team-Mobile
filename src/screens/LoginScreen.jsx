@@ -8,6 +8,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { FadeIn, PressableScale } from '../components/motion';
 import { useAuthStore } from '../store/auth';
 import { errorMessage } from '../api/client';
+import { topPad, bottomPad } from '../lib/safe';
 
 const LOGO = require('../../assets/ces-logo-white.png');
 const web = Platform.OS === 'web' ? { outlineStyle: 'none' } : null;
@@ -51,7 +52,7 @@ export default function LoginScreen({ hideHeader = false, footer = null }) {
             colors={['#15A34A', '#0F8A3E']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0.6, y: 1 }}
-            style={{ paddingTop: Platform.OS === 'web' ? 72 : insets.top + 40, paddingBottom: 34, paddingHorizontal: 28, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: 'hidden' }}
+            style={{ paddingTop: topPad(insets, Platform.OS === 'web' ? 72 : 40), paddingBottom: 34, paddingHorizontal: 28, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: 'hidden' }}
           >
             <Image source={LOGO} accessibilityLabel="CES Team" style={{ width: 168, height: 60 }} resizeMode="contain" />
             <Text style={{ marginTop: 4, color: '#fff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 24 }}>CES Team</Text>

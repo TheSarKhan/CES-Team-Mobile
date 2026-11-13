@@ -17,6 +17,7 @@ import { errorMessage } from '../api/client';
 import { absoluteUrl } from '../config';
 import { useAuthStore } from '../store/auth';
 import { qk, useConversation, useConversations, useMembers, useUser, useUsers } from '../hooks/useChat';
+import { topPad, bottomPad } from '../lib/safe';
 
 const MAX_W = 760;
 
@@ -207,7 +208,7 @@ export function ConversationInfo({ id, onBack, dialog = false, onOpenMedia }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surfaceAlt }}>
-      <View style={{ paddingTop: dialog || Platform.OS === 'web' ? 0 : insets.top, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+      <View style={{ paddingTop: dialog ? 0 : topPad(insets, 0), backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, height: 58 }}>
           <Pressable onPress={onBack} hitSlop={10} accessibilityLabel={dialog ? 'Bağla' : 'Geri'}>{dialog ? <CloseIcon size={24} color={colors.headerInk} /> : <ArrowLeft size={24} color={colors.headerInk} />}</Pressable>
           <Text style={{ flex: 1, color: colors.headerInk, fontWeight: '800', fontSize: 19 }}>{isGroup ? 'Qrup məlumatı' : 'Əlaqə məlumatı'}</Text>

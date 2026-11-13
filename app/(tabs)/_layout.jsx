@@ -13,6 +13,7 @@ import { useConversations, useRealtimeSync, useMe } from '../../src/hooks/useCha
 import { Avatar } from '../../src/components/Avatar';
 import { useCardUnread } from '../../src/hooks/useCards';
 import { registerForPushNotificationsAsync, onNotificationOpened } from '../../src/lib/push';
+import { topPad, bottomPad } from '../../src/lib/safe';
 
 // «İşlərim» (work) hələlik gizlidir: menyuda yoxdur, ekranı saxlanılıb (href: null)
 const NAV = [
@@ -48,7 +49,7 @@ function BottomBar() {
   const unread = useUnread();
   const cardUnread = useCardsUnread();
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line, paddingHorizontal: 8, paddingTop: 5, paddingBottom: Platform.OS === 'web' ? 5 : Math.max(insets.bottom, 5) }}>
+    <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line, paddingHorizontal: 8, paddingTop: 5, paddingBottom: Platform.OS === 'web' ? bottomPad(insets, 5) : Math.max(insets.bottom, 5) }}>
       {NAV.map(({ name, label, Icon }) => {
         const active = path === `/${name}`;
         return (

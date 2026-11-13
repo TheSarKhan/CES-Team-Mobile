@@ -21,6 +21,7 @@ import { displayValue, computedRows, tone, visibleFields } from '../lib/cardUi';
 import { fileSize, hhmm, dayLabel } from '../lib/format';
 import { isoToDisplay, displayToIso, todayIso } from '../lib/dates';
 import { SelectBox } from '../components/ui';
+import { topPad, bottomPad } from '../lib/safe';
 
 const TABS = [['info', 'Məlumat'], ['history', 'Tarixçə']];
 
@@ -198,7 +199,7 @@ export function CardDetail({ id, onBack, onOpenChatGroup }) {
   if (view === 'chat') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <View style={{ paddingTop: Platform.OS === 'web' ? 12 : insets.top + 6, paddingHorizontal: 14, paddingBottom: 10, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ paddingTop: topPad(insets, Platform.OS === 'web' ? 12 : 6), paddingHorizontal: 14, paddingBottom: 10, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           {onBack ? <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Geri"><ArrowLeft size={24} color={colors.headerInk} /></Pressable> : null}
           <Pressable onPress={() => { setTab('info'); setView('info'); }} accessibilityRole="button" accessibilityLabel="Kart məlumatları" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <TypeTile type={s.type} size={44} />
@@ -221,7 +222,7 @@ export function CardDetail({ id, onBack, onOpenChatGroup }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ paddingTop: Platform.OS === 'web' ? 14 : insets.top + 6, paddingHorizontal: 14, paddingBottom: 10, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line, gap: 10 }}>
+      <View style={{ paddingTop: topPad(insets, Platform.OS === 'web' ? 14 : 6), paddingHorizontal: 14, paddingBottom: 10, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Pressable onPress={() => setView('chat')} hitSlop={10} accessibilityLabel="Söhbətə qayıt"><ArrowLeft size={24} color={colors.headerInk} /></Pressable>
           <TypeTile type={s.type} size={44} />

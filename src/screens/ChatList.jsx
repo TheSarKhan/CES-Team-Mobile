@@ -12,6 +12,7 @@ import { useAuthStore } from '../store/auth';
 import { qk, useConversations, useUsers } from '../hooks/useChat';
 import { listTime, messagePreview, hhmm } from '../lib/format';
 import { FadeIn, PressableScale } from '../components/motion';
+import { topPad, bottomPad } from '../lib/safe';
 
 function Row({ c, selected, onPress, myId }) {
   const { colors } = useTheme();
@@ -130,7 +131,7 @@ export function ChatList({ selectedId, onOpen }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      <View style={{ paddingTop: Platform.OS === 'web' ? 14 : insets.top + 6, paddingHorizontal: 14, paddingBottom: 8, gap: 10 }}>
+      <View style={{ paddingTop: topPad(insets, Platform.OS === 'web' ? 14 : 6), paddingHorizontal: 14, paddingBottom: 8, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={{ flex: 1, color: colors.headerInk, fontWeight: '800', fontSize: 28 }}>Söhbətlər</Text>
           <Pressable onPress={() => setNewChat(true)} accessibilityLabel="Yeni söhbət" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' }}>

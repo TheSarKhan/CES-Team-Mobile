@@ -24,6 +24,7 @@ import { useAuthStore } from '../store/auth';
 import { setActiveConversation } from '../lib/push';
 import { dayLabel, messagePreview } from '../lib/format';
 import { qk, useConversation, useConversations, useMembers, useMessages, useTyping, useActiveChat, upsertMessage, loadOlder } from '../hooks/useChat';
+import { topPad, bottomPad } from '../lib/safe';
 
 const REACTIONS = ['👍', '✅', '❤️', '😂', '🙏', '❗'];
 const dayKey = (iso) => new Date(iso).toDateString();
@@ -196,7 +197,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.chatBg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Başlıq */}
-      {embedded ? null : <View style={{ paddingTop: Platform.OS === 'web' ? 0 : insets.top, backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+      {embedded ? null : <View style={{ paddingTop: topPad(insets, 0), backgroundColor: colors.header, borderBottomWidth: 1, borderBottomColor: colors.line }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, height: 62 }}>
           {onBack ? <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Geri"><ArrowLeft size={24} color={colors.headerInk} /></Pressable> : null}
           <Pressable onPress={() => (isWide ? setInfo(true) : router.push(`/info/${id}`))} accessibilityRole="button" accessibilityLabel="Söhbət məlumatları" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -271,7 +272,7 @@ export function ChatPane({ id, onBack, embedded = false }) {
         </View>
       ) : null}
 
-      <View style={{ paddingBottom: Platform.OS === 'web' ? 'calc(env(safe-area-inset-bottom, 0px) * var(--sab, 1))' : embedded ? 0 : insets.bottom }}>
+      <View style={{ paddingBottom: embedded && Platform.OS !== 'web' ? 0 : bottomPad(insets, 0) }}>
         <Composer
           key={id}
           conversationId={Number(id)}

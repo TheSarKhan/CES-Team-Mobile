@@ -11,6 +11,7 @@ import { useConversations } from '../../src/hooks/useChat';
 import { useCards, useCardSummary } from '../../src/hooks/useCards';
 import { CardRow } from '../../src/components/CardParts';
 import { listTime, messagePreview } from '../../src/lib/format';
+import { topPad, bottomPad } from '../../src/lib/safe';
 
 function Tile({ Icon, value, label, tone, onPress }) {
   const { colors } = useTheme();
@@ -59,7 +60,7 @@ export default function Work() {
   );
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: 16, paddingTop: Platform.OS === 'web' ? 24 : insets.top + 12, gap: 16, alignItems: 'center' }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: 16, paddingTop: topPad(insets, Platform.OS === 'web' ? 24 : 12), gap: 16, alignItems: 'center' }}>
       <View style={{ width: '100%', maxWidth: 760, gap: 16 }}>
         <View>
           <Text style={{ color: colors.muted, fontSize: 14 }}>Salam, {me?.fullName?.split(' ')[0]}</Text>
