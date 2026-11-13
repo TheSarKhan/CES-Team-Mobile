@@ -1,15 +1,15 @@
 name: Android APK CI and deploy
+# APK yığımı ~12-18 dəqiqə çəkir və veb deploy üçün lazım deyil, ona görə hər push-da işləmir:
+#   • yeni APK üçün:  git tag v1.0.X && git push origin v1.0.X   (və ya GitHub → Actions → «Run workflow»)
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: ces-team-android-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -56,7 +56,6 @@ jobs:
           name: ces-team-apk
           path: android/app/build/outputs/apk/release/app-release.apk
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
