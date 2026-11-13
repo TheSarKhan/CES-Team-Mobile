@@ -30,7 +30,16 @@ export function fixMobileViewport() {
   window.addEventListener('orientationchange', settle);
   window.addEventListener('pageshow', settle);
   document.addEventListener('visibilitychange', settle);
-  document.addEventListener('focusout', settle);
+  // Klaviatura bağlananda WebKit-i yerləşməni yenidən hesablamağa məcbur et (viewport meta-nı qısa müddətə dəyişib qaytarmaq)
+  const nudge = () => {
+    const meta = document.querySelector('meta[name=viewport]');
+    if (!meta) return;
+    const orig = meta.getAttribute('content');
+    meta.setAttribute('content', `${orig},maximum-scale=1`);
+    setTimeout(() => { meta.setAttribute('content', orig); reset(); }, 60);
+  };
+  const onOut = () => { settle(); setTimeout(() => { if (!['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) nudge(); }, 250); };
+  document.addEventListener('focusout', onOut);
   document.addEventListener('focusin', settle);
   settle();
   return () => {
@@ -40,7 +49,7 @@ export function fixMobileViewport() {
     window.removeEventListener('orientationchange', settle);
     window.removeEventListener('pageshow', settle);
     document.removeEventListener('visibilitychange', settle);
-    document.removeEventListener('focusout', settle);
+    document.removeEventListener('focusout', onOut);
     document.removeEventListener('focusin', settle);
     probe.remove();
     ['position', 'left', 'top', 'width', 'height'].forEach((k) => root.style.removeProperty(k));

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, ScrollView, Platform, Pressable, Switch, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import { tokenStore } from '../../src/api/tokenStore';
 import { errorMessage } from '../../src/api/client';
 import { registerForPushNotificationsAsync, getCurrentPushToken } from '../../src/lib/push';
 import * as push from '../../src/lib/push';
+import { buildId, toggleHud } from '../../src/lib/appUpdate';
 import { dayLabel, hhmm, fileSize } from '../../src/lib/format';
 
 // ── kiçik quruluş blokları ──
@@ -322,9 +323,16 @@ export default function Profile() {
       <Row label="Qruplar üzrə ayarlar" tone="brand" onPress={() => setSheet('groups')} />
     </Section>
   );
+  const taps = useRef({ n: 0, t: 0 });
+  const tapVersion = () => { // 5 toxunuş: ekran ölçüsü diaqnostikası (HUD)
+    const now = Date.now();
+    taps.current = { n: now - taps.current.t < 1500 ? taps.current.n + 1 : 1, t: now };
+    if (taps.current.n >= 5) { taps.current.n = 0; toggleHud(); }
+  };
   const appSettings = (
     <Section title="Tətbiq ayarları">
       <Row first label="Media və yaddaş" onPress={() => setSheet('storage')} />
+      <Row label="Versiya" value={buildId()} onPress={tapVersion} />
     </Section>
   );
   const security = (

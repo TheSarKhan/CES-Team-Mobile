@@ -8,6 +8,7 @@ import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJa
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 import { useAuthStore } from '../src/store/auth';
 import { fixMobileViewport } from '../src/lib/viewport';
+import { watchForUpdates } from '../src/lib/appUpdate';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } });
 
@@ -17,6 +18,7 @@ function Shell() {
   const status = useAuthStore((s) => s.status);
   useEffect(() => { hydrate(); }, [hydrate]);
   useEffect(() => fixMobileViewport(), []);
+  useEffect(() => watchForUpdates(), []);
 
   if (status === 'loading') {
     return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}><ActivityIndicator color={colors.brand} size="large" /></View>;
